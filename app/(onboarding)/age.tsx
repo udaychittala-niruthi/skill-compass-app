@@ -1,9 +1,11 @@
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Dimensions,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     Text,
@@ -30,14 +32,16 @@ import { useDispatch } from 'react-redux';
 import '../../global.css';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { useTheme } from '../../src/context/ThemeContext';
-import { updateUserProfile } from '../../src/store/slices/authSlice';
+import { AppDispatch } from '../../src/store';
+import { updateAge } from '../../src/store/slices/onboardingSlice';
 import { AGE_GROUPS, getAgeMeta, ITEM_WIDTH } from '../../src/utils/ageHelpers';
 
 const { width } = Dimensions.get('window');
 const SPACING = (width - ITEM_WIDTH) / 2;
 const AGES = Array.from({ length: 100 }, (_, i) => i + 1);
-
 const AGE_META = AGES.map((age) => getAgeMeta(age));
+
+const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as any;
 
 const AgeItem = React.memo(({
     item,
@@ -45,14 +49,23 @@ const AgeItem = React.memo(({
     scrollX,
     activeColor
 }: {
-    item: number,
-    index: number,
-    scrollX: SharedValue<number>,
-    activeColor: SharedValue<string>
+    item: number;
+    index: number;
+    scrollX: SharedValue<number>;
+    activeColor: SharedValue<string>;
 }) => {
     const animatedStyle = useAnimatedStyle(() => {
         const position = scrollX.value / ITEM_WIDTH;
         const distance = Math.abs(position - index);
+
+        // Optimize by skipping complex calculations for far items
+        if (distance > 2) {
+            return {
+                transform: [{ scale: 0.4 }],
+                opacity: 0.3,
+                color: '#94a3b8'
+            };
+        }
 
         const scale = interpolate(
             distance,
@@ -73,57 +86,54 @@ const AgeItem = React.memo(({
             opacity,
             color: distance < 0.5 ? activeColor.value : '#94a3b8'
         };
-    });
+    }, [scrollX, index, activeColor]);
 
-    const BlurCircle = ({ opacityHex, size, radius }: { opacityHex: string, size: number, radius: number }) => {
-        const animatedStyle = useAnimatedStyle(() => {
-            const position = scrollX.value / ITEM_WIDTH;
-            const distance = Math.abs(position - index);
+    const backgroundStyle = useAnimatedStyle(() => {
+        const position = scrollX.value / ITEM_WIDTH;
+        const distance = Math.abs(position - index);
 
-            const backgroundOpacity = interpolate(
-                distance,
-                [0, 0.5, 1],
-                [1, 0.2, 0],
-                Extrapolation.CLAMP
-            );
-
-            const backgroundScale = interpolate(
-                distance,
-                [0, 0.5, 1],
-                [1, 0.95, 0.8],
-                Extrapolation.CLAMP
-            );
-
+        if (distance > 1.5) {
             return {
-                opacity: backgroundOpacity,
-                transform: [{ scale: backgroundScale }],
-                backgroundColor: activeColor.value + opacityHex,
+                opacity: 0,
+                transform: [{ scale: 0.8 }],
             };
-        });
+        }
 
-        return (
+        const backgroundOpacity = interpolate(
+            distance,
+            [0, 0.5, 1],
+            [0.15, 0.05, 0],
+            Extrapolation.CLAMP
+        );
+
+        const backgroundScale = interpolate(
+            distance,
+            [0, 0.5, 1],
+            [1, 0.95, 0.8],
+            Extrapolation.CLAMP
+        );
+
+        return {
+            opacity: backgroundOpacity,
+            transform: [{ scale: backgroundScale }],
+            backgroundColor: activeColor.value,
+        };
+    }, [scrollX, index, activeColor]);
+
+    return (
+        <View style={{ width: ITEM_WIDTH }} className="items-center justify-center h-48">
             <Animated.View
                 style={[
                     {
                         position: 'absolute',
-                        width: size,
-                        height: size,
-                        borderRadius: radius,
+                        width: 140,
+                        height: 140,
+                        borderRadius: 70,
                     },
-                    animatedStyle
+                    backgroundStyle
                 ]}
+                className="backdrop-blur-xl"
             />
-        );
-    };
-
-    return (
-        <View style={{ width: ITEM_WIDTH }} className="items-center justify-center h-48">
-            {/* Outer glow - largest, most subtle */}
-            <BlurCircle opacityHex="0F" size={140} radius={70} />
-            {/* Middle glow */}
-            <BlurCircle opacityHex="18" size={120} radius={60} />
-            {/* Inner glow - most visible */}
-            <BlurCircle opacityHex="26" size={95} radius={55} />
             <Animated.Text
                 allowFontScaling={false}
                 style={[
@@ -135,19 +145,29 @@ const AgeItem = React.memo(({
             </Animated.Text>
         </View>
     );
+}, (prev, next) => {
+    // Custom comparison to prevent unnecessary re-renders
+    return prev.item === next.item && prev.index === next.index;
 });
+AgeItem.displayName = 'AgeItem';
+
 export default function AgeSelectionScreen() {
     const router = useRouter();
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<AppDispatch>();
     const { setTheme } = useTheme();
-    const listRef = useRef<Animated.FlatList<number>>(null);
+    const listRef = useRef<any>(null);
+    const scrollViewRef = useRef<Animated.ScrollView>(null);
+    const textInputRef = useRef<TextInput>(null);
 
     const scrollX = useSharedValue(0);
     const iconAnimScale = useSharedValue(1);
+    const lastGroupIndex = useSharedValue(0);
+    const lastAge = useSharedValue(0);
 
-    const [manualEntry, setManualEntry] = useState('16');
-    const [activeGroupIndex, setActiveGroupIndex] = useState(1);
-    const [activeAgeNum, setActiveAgeNum] = useState(16);
+    const [manualEntry, setManualEntry] = useState('');
+    const [activeGroupIndex, setActiveGroupIndex] = useState(0);
+    const [activeAgeNum, setActiveAgeNum] = useState(0);
+    const [showError, setShowError] = useState(false);
 
     const activeIndex = useDerivedValue(() => {
         return Math.round(scrollX.value / ITEM_WIDTH);
@@ -156,7 +176,6 @@ export default function AgeSelectionScreen() {
     const activeMetaIndex = useDerivedValue(() => {
         return Math.max(0, Math.min(AGES.length - 1, activeIndex.value));
     });
-    AgeItem.displayName = 'AgeItem';
 
     const activeMeta = useDerivedValue(() => {
         return AGE_META[activeMetaIndex.value];
@@ -166,10 +185,12 @@ export default function AgeSelectionScreen() {
         return activeMeta.value.color;
     });
 
+    // Debounced group change with threshold to prevent excessive updates
     useAnimatedReaction(
         () => activeMeta.value.groupIndex,
-        (newGroup, oldGroup) => {
-            if (newGroup !== oldGroup) {
+        (newGroup) => {
+            if (newGroup !== lastGroupIndex.value) {
+                lastGroupIndex.value = newGroup;
                 runOnJS(setActiveGroupIndex)(newGroup);
                 runOnJS(setTheme)(AGE_GROUPS[newGroup].group);
                 iconAnimScale.value = withSequence(
@@ -178,18 +199,22 @@ export default function AgeSelectionScreen() {
                 );
                 runOnJS(Haptics.selectionAsync)();
             }
-        }
+        },
+        [lastGroupIndex]
     );
 
+    // Throttled age update
     useAnimatedReaction(
         () => activeIndex.value,
-        (newIndex, oldIndex) => {
-            if (newIndex !== oldIndex) {
-                const age = AGES[Math.max(0, Math.min(99, newIndex))];
+        (newIndex) => {
+            const age = AGES[Math.max(0, Math.min(99, newIndex))];
+            if (age !== lastAge.value) {
+                lastAge.value = age;
                 runOnJS(setActiveAgeNum)(age);
                 runOnJS(setManualEntry)(age.toString());
             }
-        }
+        },
+        [lastAge]
     );
 
     const scrollHandler = useAnimatedScrollHandler({
@@ -208,9 +233,41 @@ export default function AgeSelectionScreen() {
         }
     }, []);
 
+    // Start with no selection (age 0)
     useEffect(() => {
-        setTimeout(() => scrollToAge(16, false), 100);
-    }, [scrollToAge]);
+        // Don't auto-scroll, let user select their age
+    }, []);
+
+    // Clear error when user selects a valid age
+    useEffect(() => {
+        if (activeAgeNum > 0 && showError) {
+            setShowError(false);
+        }
+    }, [activeAgeNum, showError]);
+
+    // Handle keyboard events to scroll input into view
+    useEffect(() => {
+        const keyboardWillShow = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            (e) => {
+                // Scroll to bottom when keyboard appears
+                setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 100);
+            }
+        );
+
+        const keyboardWillHide = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => {
+            }
+        );
+
+        return () => {
+            keyboardWillShow.remove();
+            keyboardWillHide.remove();
+        };
+    }, []);
 
     const circleStyle = useAnimatedStyle(() => ({
         backgroundColor: activeColor.value + '20',
@@ -228,32 +285,34 @@ export default function AgeSelectionScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-white">
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                className="flex-1"
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-            >
-                <View className="flex-row items-center justify-between px-6 py-4">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-10 h-10 rounded-full border border-slate-100 items-center justify-center bg-white shadow-sm"
-                    >
-                        <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
-                    </TouchableOpacity>
+            <View className="flex-row items-center justify-between px-6 py-4">
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    className="w-10 h-10 rounded-full border border-slate-100 items-center justify-center bg-white shadow-sm"
+                >
+                    <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
+                </TouchableOpacity>
 
-                    <View className="flex-row gap-1.5">
-                        <View className="h-1.5 w-8 rounded-full bg-blue-600" />
-                        <View className="h-1.5 w-2 rounded-full bg-slate-200" />
-                        <View className="h-1.5 w-2 rounded-full bg-slate-200" />
-                    </View>
-
-                    <View className="w-10" />
+                <View className="flex-row gap-1.5">
+                    <View className="h-1.5 w-8 rounded-full bg-blue-600" />
+                    <View className="h-1.5 w-2 rounded-full bg-slate-200" />
+                    <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                 </View>
 
+                <View className="w-10" />
+            </View>
+
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                className="flex-1"
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+            >
                 <Animated.ScrollView
-                    contentContainerStyle={{ flexGrow: 1, alignItems: 'center', paddingTop: 32 }}
+                    ref={scrollViewRef}
+                    contentContainerStyle={{ flexGrow: 1, alignItems: 'center', paddingTop: 32, paddingBottom: 16 }}
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
+                    bounces={false}
                 >
                     <Animated.View
                         style={[
@@ -312,12 +371,12 @@ export default function AgeSelectionScreen() {
                     </View>
 
                     <View className="h-44 w-full">
-                        <Animated.FlatList
+                        <AnimatedFlashList
                             ref={listRef}
                             data={AGES}
                             horizontal
-                            keyExtractor={(i) => i.toString()}
-                            renderItem={({ item, index }) => (
+                            keyExtractor={(i: any) => i.toString()}
+                            renderItem={({ item, index }: any) => (
                                 <AgeItem
                                     item={item}
                                     index={index}
@@ -331,23 +390,19 @@ export default function AgeSelectionScreen() {
                             contentContainerStyle={{ paddingHorizontal: SPACING }}
                             onScroll={scrollHandler}
                             scrollEventThrottle={16}
-                            removeClippedSubviews={true}
-                            initialNumToRender={5}
-                            windowSize={3}
-                            getItemLayout={(_, index) => ({
-                                length: ITEM_WIDTH,
-                                offset: ITEM_WIDTH * index,
-                                index,
-                            })}
+                            estimatedItemSize={ITEM_WIDTH}
+                            initialNumToRender={7}
+                            drawDistance={ITEM_WIDTH * 5}
                         />
                     </View>
 
-                    <View className="mt-14 mb-8">
+                    <View className="mt-14 mb-8 w-full items-center">
                         <View className="bg-white px-8 py-4 rounded-2xl border border-slate-100 shadow-sm flex-row items-center gap-6 min-w-[200px] justify-center">
                             <Text className="text-slate-400 text-[10px] font-bold uppercase tracking-widest font-bold">
                                 MANUAL ENTRY
                             </Text>
                             <TextInput
+                                ref={textInputRef}
                                 className="text-2xl font-bold p-0 min-w-[40px] text-center font-bold"
                                 style={{ color: activeGroupData.color }}
                                 keyboardType="number-pad"
@@ -357,31 +412,55 @@ export default function AgeSelectionScreen() {
                                     const age = Number(t);
                                     if (!isNaN(age) && age > 0 && age <= 100) scrollToAge(age);
                                 }}
+                                onFocus={() => {
+                                    setTimeout(() => {
+                                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                                    }, 300);
+                                }}
                                 maxLength={3}
                                 selectTextOnFocus
                             />
                         </View>
                     </View>
-                </Animated.ScrollView>
 
-                <View className="p-8 bg-white">
-                    <PrimaryButton
-                        title="Next"
-                        iconName="arrow-forward"
-                        onPress={() => {
-                            dispatch(updateUserProfile({
-                                age: activeAgeNum,
-                                ageGroup: activeGroupData.group
-                            }));
-                            console.log('Next', activeAgeNum, activeGroupData.group);
-                            if (activeGroupData.group === 'kid') {
-                                router.push('/(onboarding)/hero');
-                            } else {
-                                router.push('/(onboarding)/interests' as any);
-                            }
-                        }}
-                    />
-                </View>
+                    <View className="px-8 w-full mt-auto">
+                        {showError && activeAgeNum === 0 && (
+                            <Text className="text-red-500 text-center mb-3 font-medium">
+                                Please select your age
+                            </Text>
+                        )}
+                        <PrimaryButton
+                            title="Next"
+                            iconName="arrow-forward"
+                            onPress={async () => {
+                                if (activeAgeNum === 0 || !activeAgeNum) {
+                                    setShowError(true);
+                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                                    return;
+                                }
+                                setShowError(false);
+
+                                try {
+                                    // Call updateAge API and wait for response
+                                    const result = await dispatch(updateAge(activeAgeNum)).unwrap();
+
+                                    // Navigate based on server's ageGroup response
+                                    if (result.group === 'KIDS') {
+                                        router.push('/(onboarding)/hero');
+                                    } else {
+                                        // teen, student, professional, senior go to interests
+                                        router.push('/(onboarding)/interests' as any);
+                                    }
+                                } catch (error: any) {
+                                    // Handle API error
+                                    console.error('Age update failed:', error);
+                                    setShowError(true);
+                                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                                }
+                            }}
+                        />
+                    </View>
+                </Animated.ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

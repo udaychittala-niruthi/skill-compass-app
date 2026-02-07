@@ -13,7 +13,7 @@ const api = axios.create({
 // Request interceptor to add token
 api.interceptors.request.use(
     async (config) => {
-        const token = await SecureStore.getItemAsync('token');
+        const token = await SecureStore.getItemAsync('authToken');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -25,15 +25,15 @@ api.interceptors.request.use(
 );
 
 export const setAuthToken = async (token: string) => {
-    await SecureStore.setItemAsync('token', token);
+    await SecureStore.setItemAsync('authToken', token);
 };
 
 export const getAuthToken = async () => {
-    return await SecureStore.getItemAsync('token');
+    return await SecureStore.getItemAsync('authToken');
 };
 
 export const removeAuthToken = async () => {
-    await SecureStore.deleteItemAsync('token');
+    await SecureStore.deleteItemAsync('authToken');
 };
 
 export default api;

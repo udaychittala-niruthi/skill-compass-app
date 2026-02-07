@@ -1,14 +1,17 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import api from '../../services/api';
+import { InterestItem, PredictedBranch, PredictedCourse, SkillItem } from '../../types/onboarding';
 
 interface CommonState {
-    interests: any[];
-    skills: any[];
+    interests: InterestItem[];
+    skills: SkillItem[];
+    selectedInterests: number[];
+    selectedSkills: number[];
     courses: any[];
     branches: any[]; // Branches for a specific course
     predictions: {
-        course: any | null;
-        branch: any | null;
+        courses: PredictedCourse[];
+        branches: PredictedBranch[];
     };
     loading: boolean;
     error: string | null;
@@ -17,11 +20,13 @@ interface CommonState {
 const initialState: CommonState = {
     interests: [],
     skills: [],
+    selectedInterests: [],
+    selectedSkills: [],
     courses: [],
     branches: [],
     predictions: {
-        course: null,
-        branch: null,
+        courses: [],
+        branches: [],
     },
     loading: false,
     error: null,
@@ -42,49 +47,68 @@ const extractErrorMessage = (err: any): string => {
 export const fetchInterests = createAsyncThunk('common/fetchInterests', async (_, { rejectWithValue }) => {
     try {
         const response = await api.get('/common/interests');
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const fetchSkills = createAsyncThunk('common/fetchSkills', async (_, { rejectWithValue }) => {
     try {
         const response = await api.get('/common/skills');
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const fetchCourses = createAsyncThunk('common/fetchCourses', async (_, { rejectWithValue }) => {
     try {
         const response = await api.get('/common/courses');
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const fetchBranches = createAsyncThunk('common/fetchBranches', async (courseId: number, { rejectWithValue }) => {
     try {
         const response = await api.get(`/common/courses/${courseId}/branches`);
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const predictCourse = createAsyncThunk('common/predictCourse', async (data: { interestIds: number[]; skillIds: number[] }, { rejectWithValue }) => {
     try {
         const response = await api.post('/common/predict/course', data);
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const predictBranch = createAsyncThunk('common/predictBranch', async (data: { interestIds: number[]; skillIds: number[]; courseId: number }, { rejectWithValue }) => {
     try {
         const response = await api.post('/common/predict/branch', data);
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 const commonSlice = createSlice({
     name: 'common',
     initialState,
-    reducers: {},
+    reducers: {
+        toggleInterest: (state, action) => {
+            const id = action.payload;
+            const index = state.selectedInterests.indexOf(id);
+            if (index > -1) {
+                state.selectedInterests.splice(index, 1);
+            } else {
+                state.selectedInterests.push(id);
+            }
+        },
+        toggleSkill: (state, action) => {
+            const id = action.payload;
+            const index = state.selectedSkills.indexOf(id);
+            if (index > -1) {
+                state.selectedSkills.splice(index, 1);
+            } else {
+                state.selectedSkills.push(id);
+            }
+        },
+    },
     extraReducers: (builder) => {
         const handlePending = (state: CommonState) => { state.loading = true; state.error = null; };
         const handleRejected = (state: CommonState, action: any) => { state.loading = false; state.error = action.payload as string; };
@@ -125,7 +149,7 @@ const commonSlice = createSlice({
         builder.addCase(predictCourse.pending, handlePending)
             .addCase(predictCourse.fulfilled, (state, action) => {
                 state.loading = false;
-                state.predictions.course = action.payload;
+                state.predictions.courses = action.payload;
             })
             .addCase(predictCourse.rejected, handleRejected);
 
@@ -133,10 +157,11 @@ const commonSlice = createSlice({
         builder.addCase(predictBranch.pending, handlePending)
             .addCase(predictBranch.fulfilled, (state, action) => {
                 state.loading = false;
-                state.predictions.branch = action.payload;
+                state.predictions.branches = action.payload;
             })
             .addCase(predictBranch.rejected, handleRejected);
     },
 });
 
+export const { toggleInterest, toggleSkill } = commonSlice.actions;
 export default commonSlice.reducer;

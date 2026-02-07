@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { jwtDecode, JwtPayload } from "jwt-decode";
 import React, { useEffect } from 'react';
@@ -10,6 +10,11 @@ import Animated, {
     useSharedValue,
     withTiming
 } from 'react-native-reanimated';
+import { useDispatch } from 'react-redux';
+import { useOnboardingRedirect } from '../hooks/useOnboardingRedirect';
+import { setAuthToken } from '../services/api';
+import { AppDispatch } from '../store';
+import { checkOnboardingStatus } from '../store/slices/authSlice';
 
 interface MyTokenPayload extends JwtPayload {
     id: number;
@@ -29,84 +34,87 @@ const SPLASH_DURATION = 2000; // Total duration in ms
 export default function CustomSplashScreen({ onFinish }: CustomSplashScreenProps) {
     const opacity = useSharedValue(1);
     const scale = useSharedValue(0.9);
+    const dispatch = useDispatch<AppDispatch>();
+    const router = useRouter();
+    const { performRedirect } = useOnboardingRedirect();
 
     useEffect(() => {
         // Start entrance animation
         scale.value = withTiming(1, { duration: 1000 });
 
+        const handleFinish = (path: string) => {
+            onFinish();
+            router.replace(path as any);
+        };
+
         const checkTokenAndRedirect = async () => {
             try {
                 const token = await SecureStore.getItemAsync('authToken');
+                console.log('🔑 [SPLASH] Token found:', token ? 'YES' : 'NO');
 
                 if (!token) {
-                    // No token, redirect to Login
+                    console.log('❌ [SPLASH] No token found, redirecting to login');
                     setTimeout(() => {
                         opacity.value = withTiming(0, { duration: 500 }, (finished) => {
-                            if (finished) runOnJS(router.replace)('/(auth)/login');
+                            if (finished) runOnJS(handleFinish)('/(auth)/login');
                         });
                     }, SPLASH_DURATION);
                     return;
                 }
 
-                // Decode token
+                // Decode to check expiry first
                 try {
                     const decoded = jwtDecode<MyTokenPayload>(token);
                     const currentTime = Date.now() / 1000;
 
                     if (decoded.exp && decoded.exp < currentTime) {
-                        // Token expired
+                        console.log('⏰ [SPLASH] Token expired, deleting and redirecting to login');
                         await SecureStore.deleteItemAsync('authToken');
                         setTimeout(() => {
                             opacity.value = withTiming(0, { duration: 500 }, (finished) => {
-                                if (finished) runOnJS(router.replace)('/(auth)/login');
+                                if (finished) runOnJS(handleFinish)('/(auth)/login');
                             });
                         }, SPLASH_DURATION);
                         return;
                     }
+                } catch (e) {
+                    // ignore decode error here, api call will fail if invalid
+                }
 
-                    // Token valid, check status
-                    if (!decoded.isOnboarded) {
-                        if (!decoded.age) {
-                            setTimeout(() => {
-                                opacity.value = withTiming(0, { duration: 500 }, (finished) => {
-                                    if (finished) runOnJS(router.replace)('/(onboarding)/age');
-                                });
-                            }, SPLASH_DURATION);
-                        } else {
-                            // Has age but not fully onboarded - redirect to next step or Age if simplify
-                            // For now, redirect to Age as entry point for onboarding flow if not complete
-                            setTimeout(() => {
-                                opacity.value = withTiming(0, { duration: 500 }, (finished) => {
-                                    if (finished) runOnJS(router.replace)('/(onboarding)/age');
-                                });
-                            }, SPLASH_DURATION);
-                        }
-                    } else {
-                        // Onboarded
-                        setTimeout(() => {
-                            opacity.value = withTiming(0, { duration: 500 }, (finished) => {
-                                if (finished) runOnJS(router.replace)('/(tabs)');
-                            });
-                        }, SPLASH_DURATION);
-                    }
+                // Token seems valid, set it and fetch profile
+                await setAuthToken(token);
 
-                } catch (decodeError) {
-                    console.error('Token decode error:', decodeError);
-                    // Invalid token format
+                // Fetch fresh user status
+                const actionResult = await dispatch(checkOnboardingStatus());
+
+                if (checkOnboardingStatus.fulfilled.match(actionResult)) {
+                    const status = actionResult.payload;
+                    console.log('✅ [SPLASH] User status fetched:', status.user.id, status.group);
+
+                    setTimeout(() => {
+                        opacity.value = withTiming(0, { duration: 500 }, (finished) => {
+                            if (finished) {
+                                runOnJS(performRedirect)(status, onFinish);
+                            }
+                        });
+                    }, SPLASH_DURATION);
+
+                } else {
+                    console.error('❌ [SPLASH] Failed to fetch status:', actionResult.error);
+                    // If fetch fails (401), redirect to login
                     await SecureStore.deleteItemAsync('authToken');
                     setTimeout(() => {
                         opacity.value = withTiming(0, { duration: 500 }, (finished) => {
-                            if (finished) runOnJS(router.replace)('/(auth)/login');
+                            if (finished) runOnJS(handleFinish)('/(auth)/login');
                         });
                     }, SPLASH_DURATION);
                 }
 
             } catch (error) {
-                // Storage error or other issue
                 console.error('Splash screen error:', error);
                 setTimeout(() => {
                     opacity.value = withTiming(0, { duration: 500 }, (finished) => {
-                        if (finished) runOnJS(router.replace)('/(auth)/login');
+                        if (finished) runOnJS(handleFinish)('/(auth)/login');
                     });
                 }, SPLASH_DURATION);
             }
@@ -114,7 +122,7 @@ export default function CustomSplashScreen({ onFinish }: CustomSplashScreenProps
 
         checkTokenAndRedirect();
 
-    }, [opacity, scale]);
+    }, [opacity, scale, onFinish]);
 
     const animatedStyle = useAnimatedStyle(() => {
         return {

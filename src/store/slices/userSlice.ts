@@ -1,8 +1,9 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import api from '../../services/api';
+import { User } from '../../types/auth'; // Import User type
 
 interface UserState {
-    users: any[];
+    users: User[];
     loading: boolean;
     error: string | null;
 }
@@ -28,14 +29,14 @@ const extractErrorMessage = (err: any): string => {
 export const fetchAllUsers = createAsyncThunk('users/fetchAll', async (_, { rejectWithValue }) => {
     try {
         const response = await api.get('/users');
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const createUser = createAsyncThunk('users/create', async (data: any, { rejectWithValue }) => {
     try {
         const response = await api.post('/users', data);
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 

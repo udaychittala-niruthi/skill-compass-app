@@ -37,9 +37,16 @@ export default function RegisterScreen() {
         setTimeout(() => setToastVisible(false), 3000);
     };
 
+    // Show success toast on successful registration
     useEffect(() => {
         if (isAuthenticated) {
-            router.replace('/(onboarding)/age');
+            showToast('Account created successfully!', 'success');
+            // Don't navigate here - the app will reload and the splash screen
+            // will handle routing based on the token and onboarding status
+            setTimeout(() => {
+                // Force app to restart at root to trigger splash screen
+                router.replace('/');
+            }, 500);
         }
     }, [isAuthenticated, router]);
 

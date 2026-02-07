@@ -4,7 +4,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { Provider } from 'react-redux';
 import "../global.css";
@@ -42,7 +42,7 @@ export default function RootLayout() {
     <Provider store={store}>
       <ThemeProvider value={DefaultTheme}>
         <AppThemeProvider>
-          <View style={{ flex: 1 }}>
+          <GestureHandlerRootView style={{ flex: 1 }}>
             <Stack screenOptions={{
               headerShown: false,
               contentStyle: { backgroundColor: '#fafaf9' },
@@ -51,7 +51,7 @@ export default function RootLayout() {
             {!isSplashFinished && (
               <CustomSplashScreen onFinish={() => setIsSplashFinished(true)} />
             )}
-          </View>
+          </GestureHandlerRootView>
           <StatusBar style="auto" />
         </AppThemeProvider>
       </ThemeProvider>

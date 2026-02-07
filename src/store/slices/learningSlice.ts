@@ -36,49 +36,49 @@ const extractErrorMessage = (err: any): string => {
 export const fetchLearningPathStatus = createAsyncThunk('learning/fetchStatus', async (_, { rejectWithValue }) => {
     try {
         const response = await api.get('/learning-path/status');
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const fetchMyLearningPath = createAsyncThunk('learning/fetchPath', async (_, { rejectWithValue }) => {
     try {
         const response = await api.get('/learning-path/my-path');
-        return response.data; // Expecting { path: ..., modules: ... }
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const regeneratePath = createAsyncThunk('learning/regenerate', async (_, { rejectWithValue }) => {
     try {
         const response = await api.post('/learning-path/regenerate', {});
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const fetchMyProgress = createAsyncThunk('learning/fetchProgress', async (_, { rejectWithValue }) => {
     try {
         const response = await api.get('/learning-progress/my-progress');
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const updateModuleProgress = createAsyncThunk('learning/updateProgress', async ({ moduleId, data }: { moduleId: number, data: any }, { rejectWithValue }) => {
     try {
         const response = await api.post(`/learning-progress/module/${moduleId}`, data);
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const fetchMySchedule = createAsyncThunk('learning/fetchSchedule', async (_, { rejectWithValue }) => {
     try {
         const response = await api.get('/learning-schedule/my-schedule');
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
 export const updateScheduleStatus = createAsyncThunk('learning/updateSchedule', async ({ id, status }: { id: number, status: string }, { rejectWithValue }) => {
     try {
         const response = await api.put(`/learning-schedule/${id}/status`, { status });
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 

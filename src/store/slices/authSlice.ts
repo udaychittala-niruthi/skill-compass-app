@@ -1,19 +1,12 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import api, { removeAuthToken, setAuthToken } from '../../services/api';
-
-// Define types
-interface User {
-    id: string;
-    name: string;
-    email: string;
-    age?: number;
-    ageGroup?: string;
-    hero?: string;
-}
+import { LoginResponse, OnboardingStatus, User, UserPreferences } from '../../types/auth'; // Import UserPreferences
+import { updateSkillsAndInterests } from './onboardingSlice';
 
 interface AuthState {
     user: User | null;
     token: string | null;
+    fullAuthData: any | null; // Added to store full response as requested
     isAuthenticated: boolean;
     loading: boolean;
     error: string | null;
@@ -23,6 +16,7 @@ interface AuthState {
 const initialState: AuthState = {
     user: null,
     token: null,
+    fullAuthData: null,
     isAuthenticated: false,
     loading: false,
     error: null,
@@ -47,14 +41,14 @@ export const loginUser = createAsyncThunk(
     'auth/login',
     async (credentials: { email: string; password: string }, { rejectWithValue }) => {
         try {
-            const response = await api.post('/auth/login', credentials);
-            const { token, user } = response.data; // Adjust based on actual API response structure
+            const response = await api.post<LoginResponse>('/auth/login', credentials);
+            const { token } = response.data.body;
 
             if (token) {
                 await setAuthToken(token);
             }
 
-            return { user, token };
+            return response.data.body;
         } catch (err: any) {
             return rejectWithValue(extractErrorMessage(err));
         }
@@ -65,14 +59,14 @@ export const registerUser = createAsyncThunk(
     'auth/register',
     async (userData: { name: string; email: string; password: string; age?: number }, { rejectWithValue }) => {
         try {
-            const response = await api.post('/auth/register', userData);
-            const { token, user } = response.data; // Adjust based on actual API response structure
+            const response = await api.post<LoginResponse>('/auth/register', userData);
+            const { token } = response.data.body;
 
             if (token) {
                 await setAuthToken(token);
             }
 
-            return { user, token };
+            return response.data.body;
         } catch (err: any) {
             return rejectWithValue(extractErrorMessage(err));
         }
@@ -85,8 +79,8 @@ export const updateProfile = createAsyncThunk(
     'auth/updateProfile',
     async (data: Partial<User>, { rejectWithValue }) => {
         try {
-            const response = await api.put('/users/profile', data);
-            return response.data;
+            const response = await api.put<{ status: boolean; message: string; body: User }>('/users/profile', data);
+            return response.data.body;
         } catch (err: any) {
             return rejectWithValue(extractErrorMessage(err));
         }
@@ -97,8 +91,8 @@ export const checkOnboardingStatus = createAsyncThunk(
     'auth/checkStatus',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await api.get('/onboarding/status');
-            return response.data;
+            const response = await api.get<{ status: boolean; message: string; body: OnboardingStatus }>('/onboarding/status');
+            return response.data.body;
         } catch (err: any) {
             return rejectWithValue(extractErrorMessage(err));
         }
@@ -131,11 +125,12 @@ const authSlice = createSlice({
             state.loading = true;
             state.error = null;
         });
-        builder.addCase(loginUser.fulfilled, (state, action: PayloadAction<{ user: User; token: string }>) => {
+        builder.addCase(loginUser.fulfilled, (state, action: PayloadAction<any>) => {
             state.loading = false;
             state.isAuthenticated = true;
             state.user = action.payload.user;
             state.token = action.payload.token;
+            state.fullAuthData = action.payload;
         });
         builder.addCase(loginUser.rejected, (state, action) => {
             state.loading = false;
@@ -147,11 +142,12 @@ const authSlice = createSlice({
             state.loading = true;
             state.error = null;
         });
-        builder.addCase(registerUser.fulfilled, (state, action: PayloadAction<{ user: User; token: string }>) => {
+        builder.addCase(registerUser.fulfilled, (state, action: PayloadAction<any>) => {
             state.loading = false;
             state.isAuthenticated = true;
             state.user = action.payload.user;
             state.token = action.payload.token;
+            state.fullAuthData = action.payload;
         });
         builder.addCase(registerUser.rejected, (state, action) => {
             state.loading = false;
@@ -167,10 +163,23 @@ const authSlice = createSlice({
             }
         });
 
-        // Check Onboarding Status - mostly updates user state if needed
-        builder.addCase(checkOnboardingStatus.fulfilled, (state, action) => {
-            // Logic depends on what status returns, assuming it might return user details or flags
-            // For now, logging or handling specific flags if implementation requires
+        // Check OnboardingStatus - merges user and preferences
+        builder.addCase(checkOnboardingStatus.fulfilled, (state, action: PayloadAction<OnboardingStatus>) => {
+            state.user = {
+                ...action.payload.user,
+                preferences: action.payload.preferences,
+                isOnboarded: action.payload.isOnboarded, // Ensure the latest onboarding flag is used
+                age: action.payload.age,
+                group: action.payload.group
+            };
+            state.isAuthenticated = true;
+        });
+
+        // Update preferences when skills/interests are updated
+        builder.addCase(updateSkillsAndInterests.fulfilled, (state, action: PayloadAction<UserPreferences>) => {
+            if (state.user) {
+                state.user.preferences = action.payload;
+            }
         });
     },
 });

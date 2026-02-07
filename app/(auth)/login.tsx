@@ -9,13 +9,15 @@ import '../../global.css';
 import { CustomToast } from '../../src/components/CustomToast';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { PrimaryInput } from '../../src/components/PrimaryInput';
+import { useOnboardingRedirect } from '../../src/hooks/useOnboardingRedirect';
 import { AppDispatch, RootState } from '../../src/store';
-import { clearError, loginUser } from '../../src/store/slices/authSlice';
+import { checkOnboardingStatus, clearError, loginUser } from '../../src/store/slices/authSlice';
+import { OnboardingStatus } from '../../src/types/auth';
 
 export default function LoginScreen() {
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
-    const { loading, error, isAuthenticated } = useSelector((state: RootState) => state.auth);
+    const { loading, error, isAuthenticated, user } = useSelector((state: RootState) => state.auth);
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -33,11 +35,15 @@ export default function LoginScreen() {
         setTimeout(() => setToastVisible(false), 3000);
     };
 
+    const { performRedirect } = useOnboardingRedirect();
+
     useEffect(() => {
-        if (isAuthenticated) {
-            router.replace('/(tabs)');
+        if (isAuthenticated && user) {
+            dispatch(checkOnboardingStatus()).unwrap().then((status: OnboardingStatus) => {
+                performRedirect(status);
+            });
         }
-    }, [isAuthenticated, router]);
+    }, [isAuthenticated, user, dispatch]);
 
     useEffect(() => {
         if (error) {
@@ -75,7 +81,6 @@ export default function LoginScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-background-neutral relative">
-            {/* Toast Container */}
             {/* Toast Container */}
             {toastVisible && (
                 <CustomToast

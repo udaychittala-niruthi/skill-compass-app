@@ -30,7 +30,7 @@ const extractErrorMessage = (err: any): string => {
 export const fetchClipInfo = createAsyncThunk('clip/fetchInfo', async (_, { rejectWithValue }) => {
     try {
         const response = await api.get('/clip/info');
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
@@ -39,7 +39,7 @@ export const compareImages = createAsyncThunk('clip/compare', async (formData: F
         const response = await api.post('/clip/compare', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
-        return response.data;
+        return response.data.body;
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 

@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -26,6 +27,7 @@ import { updateUserProfile } from '../../src/store/slices/authSlice';
 const { width } = Dimensions.get('window');
 const ITEM_WIDTH = width * 0.7;
 const SPACING = (width - ITEM_WIDTH) / 2;
+const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as any;
 
 const HEROES = [
     {
@@ -243,7 +245,7 @@ HeroDot.displayName = 'HeroDot';
 export default function HeroSelectionScreen() {
     const router = useRouter();
     const dispatch = useDispatch();
-    const listRef = useRef<Animated.FlatList<typeof HEROES[0]>>(null);
+    const listRef = useRef<any>(null);
 
     const scrollX = useSharedValue(0);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -329,12 +331,12 @@ export default function HeroSelectionScreen() {
 
                 {/* Hero Slider */}
                 <View className="flex-1 justify-center">
-                    <Animated.FlatList
+                    <AnimatedFlashList
                         ref={listRef}
                         data={HEROES}
                         horizontal
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item, index }) => (
+                        keyExtractor={(item: any) => item.id}
+                        renderItem={({ item, index }: any) => (
                             <HeroItem
                                 hero={item}
                                 index={index}
@@ -347,7 +349,8 @@ export default function HeroSelectionScreen() {
                         contentContainerStyle={{ paddingHorizontal: SPACING }}
                         onScroll={scrollHandler}
                         scrollEventThrottle={16}
-                        onMomentumScrollEnd={(e) => {
+                        estimatedItemSize={ITEM_WIDTH}
+                        onMomentumScrollEnd={(e: any) => {
                             const index = Math.round(e.nativeEvent.contentOffset.x / ITEM_WIDTH);
                             setSelectedIndex(index);
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
