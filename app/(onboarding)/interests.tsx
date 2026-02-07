@@ -6,9 +6,11 @@ import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import '../../global.css';
+import { CustomToast } from '../../src/components/CustomToast';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { PrimaryInput } from '../../src/components/PrimaryInput';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useRedirectToast } from '../../src/hooks/useRedirectToast';
 import { AppDispatch, RootState } from '../../src/store';
 import { fetchInterests, toggleInterest } from '../../src/store/slices/commonSlice';
 
@@ -38,6 +40,8 @@ export default function InterestsScreen() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [displayCount, setDisplayCount] = useState(10);
+
+    const { visible: toastVisible, message: toastMessage } = useRedirectToast();
 
     useEffect(() => {
         dispatch(fetchInterests());
@@ -108,7 +112,15 @@ export default function InterestsScreen() {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-gradient-to-b from-slate-50 to-blue-50/30">
+        <SafeAreaView className="flex-1 bg-gradient-to-b from-slate-50 to-blue-50/30 relative">
+            {toastVisible && (
+                <CustomToast
+                    id="interests-redirect-toast"
+                    title="Action Required"
+                    description={toastMessage}
+                    status="info"
+                />
+            )}
             <View className="flex-row items-center justify-between px-6 py-4">
                 <TouchableOpacity
                     onPress={() => router.back()}

@@ -9,6 +9,7 @@ import Animated, {
     withRepeat,
     withTiming
 } from 'react-native-reanimated';
+import { useTheme } from '../context/ThemeContext';
 
 interface LoaderProps {
     variant?: 'fullscreen' | 'inline' | 'button';
@@ -22,9 +23,10 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 export default function Loader({
     variant = 'inline',
     size = 40,
-    color = '#4F46E5', // Default primary color
+    color,
     style,
 }: LoaderProps) {
+    const { colors } = useTheme();
     const rotation = useSharedValue(0);
 
     useEffect(() => {
@@ -49,10 +51,12 @@ export default function Loader({
     // Calculate dimensions based on size or variant
     const containerSize = variant === 'button' ? 20 : size;
     const strokeWidth = variant === 'button' ? 2 : 3;
-    const targetColor = variant === 'button' ? '#FFFFFF' : color;
+
+    // Default to theme primary if no color provided
+    const defaultColor = colors['--primary'];
+    const targetColor = variant === 'button' ? '#FFFFFF' : (color || defaultColor);
 
     // Render the geometric loader (a simple ring or arc)
-    // We can use a View with border styling for a lightweight loader
     const renderLoader = () => (
         <AnimatedView
             style={[
@@ -81,8 +85,6 @@ export default function Loader({
         );
     }
 
-
-
     return <View style={[styles.centered, style]}>{renderLoader()}</View>;
 }
 
@@ -101,3 +103,4 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
 });
+

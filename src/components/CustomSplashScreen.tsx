@@ -79,6 +79,14 @@ export default function CustomSplashScreen({ onFinish }: CustomSplashScreenProps
                     }
                 } catch (e) {
                     // ignore decode error here, api call will fail if invalid
+                    console.log('❌ [SPLASH] Token decode failed, redirecting to login', e);
+                    await SecureStore.deleteItemAsync('authToken');
+                    setTimeout(() => {
+                        opacity.value = withTiming(0, { duration: 500 }, (finished) => {
+                            if (finished) runOnJS(handleFinish)('/(auth)/login');
+                        });
+                    }, SPLASH_DURATION);
+                    return;
                 }
 
                 // Token seems valid, set it and fetch profile
@@ -91,17 +99,49 @@ export default function CustomSplashScreen({ onFinish }: CustomSplashScreenProps
                     const status = actionResult.payload;
                     console.log('✅ [SPLASH] User status fetched:', status.user.id, status.group);
 
+                    const handleSuccessRedirect = () => {
+                        onFinish();
+                        // Small delay to let splash finish unmounting
+                        setTimeout(() => {
+                            performRedirect(status);
+                        }, 100);
+                    };
+
                     setTimeout(() => {
                         opacity.value = withTiming(0, { duration: 500 }, (finished) => {
                             if (finished) {
-                                runOnJS(performRedirect)(status, onFinish);
+                                runOnJS(handleSuccessRedirect)();
                             }
                         });
                     }, SPLASH_DURATION);
 
                 } else {
-                    console.error('❌ [SPLASH] Failed to fetch status:', actionResult.error);
-                    // If fetch fails (401), redirect to login
+                    const errorMessage = (actionResult.payload as string) || (actionResult.error?.message as string) || '';
+                    console.error('❌ [SPLASH] Failed to fetch status:', errorMessage);
+
+                    // Check for specific "Age is required" error
+                    if (errorMessage.includes('Age is required')) {
+                        console.log('👉 [SPLASH] Age missing, redirecting to age selection');
+
+                        const handleAgeRedirect = () => {
+                            onFinish();
+                            router.replace({
+                                pathname: '/(onboarding)/age' as any,
+                                params: { toastMessage: 'Please set your age to continue' }
+                            });
+                        };
+
+                        setTimeout(() => {
+                            opacity.value = withTiming(0, { duration: 500 }, (finished) => {
+                                if (finished) {
+                                    runOnJS(handleAgeRedirect)();
+                                }
+                            });
+                        }, SPLASH_DURATION);
+                        return;
+                    }
+
+                    // If other fetch fails (401, etc), redirect to login
                     await SecureStore.deleteItemAsync('authToken');
                     setTimeout(() => {
                         opacity.value = withTiming(0, { duration: 500 }, (finished) => {

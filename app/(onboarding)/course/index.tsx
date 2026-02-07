@@ -1,11 +1,13 @@
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import '../../../global.css';
+import { CustomToast } from '../../../src/components/CustomToast';
 import { useTheme } from '../../../src/context/ThemeContext';
+import { useRedirectToast } from '../../../src/hooks/useRedirectToast';
 import { AppDispatch, RootState } from '../../../src/store';
 import { fetchCourses } from '../../../src/store/slices/commonSlice';
 import { getSkillsAndInterests } from '../../../src/store/slices/onboardingSlice';
@@ -15,13 +17,29 @@ export default function CourseChoiceScreen() {
     const dispatch = useDispatch<AppDispatch>();
     const { colors } = useTheme();
     const { user } = useSelector((state: RootState) => state.auth);
-    const { userSkills, userInterests } = useSelector((state: RootState) => state.onboarding);
+    const { userSkills, userInterests, loading: onboardingLoading } = useSelector((state: RootState) => state.onboarding);
+
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+    const { visible: toastVisible, message: toastMessage } = useRedirectToast();
 
     const isMandatory = user?.group === 'COLLEGE_STUDENTS' || user?.group === 'PROFESSIONALS';
 
     useEffect(() => {
-        dispatch(fetchCourses());
-        dispatch(getSkillsAndInterests());
+        const loadData = async () => {
+            setIsInitialLoading(true);
+            try {
+                await Promise.all([
+                    dispatch(fetchCourses()).unwrap(),
+                    dispatch(getSkillsAndInterests()).unwrap(),
+                ]);
+            } catch (error) {
+                console.error('Failed to load course page data:', error);
+            } finally {
+                setIsInitialLoading(false);
+            }
+        };
+        loadData();
     }, [dispatch]);
 
     const handleSkip = () => {
@@ -30,8 +48,26 @@ export default function CourseChoiceScreen() {
         }
     };
 
+    // Show loading state while initial data is being fetched
+    if (isInitialLoading) {
+        return (
+            <SafeAreaView className="flex-1 bg-slate-50 items-center justify-center">
+                <ActivityIndicator size="large" color={colors['--primary']} />
+                <Text className="mt-4 text-slate-500 font-medium">Loading your preferences...</Text>
+            </SafeAreaView>
+        );
+    }
+
     return (
-        <SafeAreaView className="flex-1 bg-slate-50">
+        <SafeAreaView className="flex-1 bg-slate-50 relative">
+            {toastVisible && (
+                <CustomToast
+                    id="course-redirect-toast"
+                    title="Action Required"
+                    description={toastMessage}
+                    status="info"
+                />
+            )}
             {/* Header */}
             <View className="flex-row items-center justify-between px-6 py-4">
                 <TouchableOpacity
@@ -45,12 +81,12 @@ export default function CourseChoiceScreen() {
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
-                    <View className="h-1.5 w-6 rounded-full bg-blue-600" />
+                    <View className="h-1.5 w-6 rounded-full" style={{ backgroundColor: colors['--primary'] }} />
                 </View>
 
                 {!isMandatory ? (
                     <TouchableOpacity onPress={handleSkip}>
-                        <Text className="text-blue-600 font-semibold text-base">Skip</Text>
+                        <Text style={{ color: colors['--primary'] }} className="font-semibold text-base">Skip</Text>
                     </TouchableOpacity>
                 ) : <View className="w-10" />}
             </View>
@@ -58,7 +94,7 @@ export default function CourseChoiceScreen() {
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
                 <View className="px-6">
                     <View className="items-center mt-6">
-                        <View className="w-24 h-24 bg-blue-100 rounded-3xl items-center justify-center mb-6" style={{ backgroundColor: `${colors['--primary']}20` }}>
+                        <View className="w-24 h-24 bg-blue-100 rounded-3xl items-center justify-center mb-6" style={{ backgroundColor: colors['--primary'] + '10', borderRadius: 20 }}>
                             <MaterialCommunityIcons name="auto-fix" size={48} color={colors['--primary']} />
                         </View>
                         <Text className="text-3xl font-extrabold text-slate-900 text-center mb-4">Select your courses</Text>
@@ -94,8 +130,8 @@ export default function CourseChoiceScreen() {
                                     <MaterialCommunityIcons name="creation" size={28} color="white" />
                                 </View>
                                 <View>
-                                    <Text className="text-white font-bold text-xl">✨ AI Predict for Me</Text>
-                                    <Text className="text-blue-50/80 text-sm font-medium">Smart matching based on skills</Text>
+                                    <Text className="text-white font-bold text-xl">AI Predict for Me</Text>
+                                    <Text className="text-blue-50/80 max-w-64 text-sm font-medium">Smart matching based on skills and interests</Text>
                                 </View>
                             </View>
                             <MaterialIcons name="chevron-right" size={28} color="white" />
@@ -107,10 +143,10 @@ export default function CourseChoiceScreen() {
                         >
                             <View className="flex-row items-center gap-4">
                                 <View className="w-12 h-12 bg-slate-50 rounded-2xl items-center justify-center">
-                                    <MaterialIcons name="search" size={28} color="#64748b" />
+                                    <MaterialIcons name="search" size={28} color={colors['--primary']} />
                                 </View>
                                 <View>
-                                    <Text className="text-slate-900 font-bold text-xl">🔍 Browse Manually</Text>
+                                    <Text className="text-slate-900 font-bold text-xl">Browse Manually</Text>
                                     <Text className="text-slate-500 text-sm font-medium">Select from all available courses</Text>
                                 </View>
                             </View>

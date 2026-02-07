@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import '../../../global.css';
 import { AICard } from '../../../src/components/AICard';
+import { CustomToast } from '../../../src/components/CustomToast';
 import PredictionLoader from '../../../src/components/PredictionLoader';
 import { PrimaryButton } from '../../../src/components/PrimaryButton';
 import { useTheme } from '../../../src/context/ThemeContext';
@@ -22,6 +23,8 @@ export default function CourseAIScreen() {
 
     const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
     const [isPredicting, setIsPredicting] = useState(true);
+    const [toastVisible, setToastVisible] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
 
     useEffect(() => {
         handleAIPredict();
@@ -48,9 +51,15 @@ export default function CourseAIScreen() {
 
         try {
             await Promise.all([predictPromise, delayPromise]);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Prediction failed:', err);
-            router.replace('/(onboarding)/course/manual' as any);
+            const errorMessage = typeof err === 'string' ? err : err?.message || 'AI prediction failed. Please try manual selection.';
+            setToastMessage(errorMessage);
+            setToastVisible(true);
+            // Redirect after showing toast for 2 seconds
+            setTimeout(() => {
+                router.replace('/(onboarding)/course/manual' as any);
+            }, 2000);
         } finally {
             setIsPredicting(false);
         }
@@ -74,6 +83,16 @@ export default function CourseAIScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-slate-50">
+            {/* Error Toast */}
+            {toastVisible && (
+                <CustomToast
+                    id="course-ai-error-toast"
+                    title="Error"
+                    description={toastMessage}
+                    status="error"
+                />
+            )}
+
             {/* Header */}
             <View className="flex-row items-center justify-between px-6 py-4">
                 <TouchableOpacity
@@ -87,7 +106,7 @@ export default function CourseAIScreen() {
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
-                    <View className="h-1.5 w-6 rounded-full bg-blue-600" />
+                    <View className="h-1.5 w-6 rounded-full" style={{ backgroundColor: colors['--primary'] }} />
                 </View>
 
                 <View className="w-10" />
@@ -119,7 +138,7 @@ export default function CourseAIScreen() {
                         className="items-center py-10"
                         activeOpacity={0.7}
                     >
-                        <Text className="text-blue-600 font-bold text-base" style={{ color: colors['--primary'] }}>
+                        <Text className="font-bold text-base" style={{ color: colors['--primary'] }}>
                             Can't find what you need? Browse All
                         </Text>
                     </TouchableOpacity>
@@ -136,3 +155,4 @@ export default function CourseAIScreen() {
         </SafeAreaView>
     );
 }
+

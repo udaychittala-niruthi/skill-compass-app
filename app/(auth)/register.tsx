@@ -106,7 +106,6 @@ export default function RegisterScreen() {
                     title={toastStatus === 'error' ? 'Error' : 'Notification'}
                     description={toastMessage}
                     status={toastStatus}
-                    className="absolute top-12 left-0 right-0 z-50 shadow-lg"
                 />
             )}
 

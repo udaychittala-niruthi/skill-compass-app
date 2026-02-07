@@ -5,7 +5,9 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import '../../../global.css';
+import { CustomToast } from '../../../src/components/CustomToast';
 import { useTheme } from '../../../src/context/ThemeContext';
+import { useRedirectToast } from '../../../src/hooks/useRedirectToast';
 import { AppDispatch } from '../../../src/store';
 import { fetchBranches } from '../../../src/store/slices/commonSlice';
 
@@ -14,6 +16,8 @@ export default function BranchChoiceScreen() {
     const params = useLocalSearchParams();
     const dispatch = useDispatch<AppDispatch>();
     const { colors } = useTheme();
+
+    const { visible: toastVisible, message: toastMessage } = useRedirectToast();
 
     const courseId = params.courseId ? Number(params.courseId) : 0;
 
@@ -24,7 +28,15 @@ export default function BranchChoiceScreen() {
     }, [courseId, dispatch]);
 
     return (
-        <SafeAreaView className="flex-1 bg-slate-50">
+        <SafeAreaView className="flex-1 bg-slate-50 relative">
+            {toastVisible && (
+                <CustomToast
+                    id="branch-redirect-toast"
+                    title="Action Required"
+                    description={toastMessage}
+                    status="info"
+                />
+            )}
             {/* Header */}
             <View className="flex-row items-center justify-between px-6 py-4">
                 <TouchableOpacity
@@ -35,7 +47,10 @@ export default function BranchChoiceScreen() {
                 </TouchableOpacity>
 
                 <View className="flex-row gap-1.5">
-                    <View className="h-1.5 w-6 rounded-full bg-blue-600" />
+                    <View className="h-1.5 w-2 rounded-full bg-slate-200" />
+                    <View className="h-1.5 w-2 rounded-full bg-slate-200" />
+                    <View className="h-1.5 w-2 rounded-full bg-slate-200" />
+                    <View className="h-1.5 w-6 rounded-full" style={{ backgroundColor: colors['--primary'] }} />
                 </View>
 
                 <View className="w-10" />
@@ -44,7 +59,7 @@ export default function BranchChoiceScreen() {
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
                 <View className="px-6 mt-10">
                     <View className="items-center">
-                        <View className="w-24 h-24 bg-blue-100 rounded-3xl items-center justify-center mb-6">
+                        <View className="w-24 h-24 bg-blue-100 rounded-3xl items-center justify-center mb-6" style={{ backgroundColor: colors['--primary'] + '10', borderRadius: 20 }}>
                             <MaterialCommunityIcons name="bullseye-arrow" size={48} color={colors['--primary']} />
                         </View>
                         <Text className="text-3xl font-extrabold text-slate-900 text-center mb-4">Refine your path</Text>
@@ -60,7 +75,7 @@ export default function BranchChoiceScreen() {
                                     <MaterialCommunityIcons name="creation" size={28} color="white" />
                                 </View>
                                 <View>
-                                    <Text className="text-white font-bold text-xl">✨ AI Suggest for Me</Text>
+                                    <Text className="text-white font-bold text-xl">AI Suggest for Me</Text>
                                     <Text className="text-blue-100 text-sm">Best fit for your background</Text>
                                 </View>
                             </View>
@@ -73,10 +88,10 @@ export default function BranchChoiceScreen() {
                         >
                             <View className="flex-row items-center gap-4">
                                 <View className="w-12 h-12 bg-slate-50 rounded-2xl items-center justify-center">
-                                    <MaterialIcons name="search" size={28} color="#64748b" />
+                                    <MaterialIcons name="search" size={28} color={colors['--primary']} />
                                 </View>
                                 <View>
-                                    <Text className="text-slate-900 font-bold text-xl">🔍 Browse Manually</Text>
+                                    <Text className="text-slate-900 font-bold text-xl">Browse Manually</Text>
                                     <Text className="text-slate-500 text-sm">See all specializations</Text>
                                 </View>
                             </View>

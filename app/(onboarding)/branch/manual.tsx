@@ -150,13 +150,17 @@ export default function BranchManualScreen() {
             </ScrollView>
 
             <View className="p-8">
-                <PrimaryButton
-                    title="Finalize Path"
-                    iconName="verified"
-                    onPress={handleFinalize}
-                    disabled={!selectedBranchId}
-                    style={!selectedBranchId ? { opacity: 0.5 } : {}}
-                />
+                {
+                    selectedBranchId && (
+                        <PrimaryButton
+                            title="Finalize Path"
+                            iconName="verified"
+                            onPress={handleFinalize}
+                            disabled={!selectedBranchId}
+                            style={!selectedBranchId ? { opacity: 0.5 } : {}}
+                        />
+                    )
+                }
             </View>
         </SafeAreaView>
     );

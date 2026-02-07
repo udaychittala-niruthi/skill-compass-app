@@ -30,8 +30,10 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import '../../global.css';
+import { CustomToast } from '../../src/components/CustomToast';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useRedirectToast } from '../../src/hooks/useRedirectToast';
 import { AppDispatch } from '../../src/store';
 import { updateAge } from '../../src/store/slices/onboardingSlice';
 import { AGE_GROUPS, getAgeMeta, ITEM_WIDTH } from '../../src/utils/ageHelpers';
@@ -169,6 +171,8 @@ export default function AgeSelectionScreen() {
     const [activeAgeNum, setActiveAgeNum] = useState(0);
     const [showError, setShowError] = useState(false);
 
+    const { visible: toastVisible, message: toastMessage } = useRedirectToast();
+
     const activeIndex = useDerivedValue(() => {
         return Math.round(scrollX.value / ITEM_WIDTH);
     });
@@ -284,7 +288,15 @@ export default function AgeSelectionScreen() {
     const activeGroupData = AGE_GROUPS[activeGroupIndex];
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
+        <SafeAreaView className="flex-1 bg-white relative">
+            {toastVisible && (
+                <CustomToast
+                    id="age-redirect-toast"
+                    title="Action Required"
+                    description={toastMessage}
+                    status="info"
+                />
+            )}
             <View className="flex-row items-center justify-between px-6 py-4">
                 <TouchableOpacity
                     onPress={() => router.back()}

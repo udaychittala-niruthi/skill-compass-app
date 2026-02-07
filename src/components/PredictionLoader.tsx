@@ -11,10 +11,12 @@ import Animated, {
     withSequence,
     withTiming
 } from 'react-native-reanimated';
+import { useTheme } from '../context/ThemeContext';
 
 type SharedValue<T> = { value: T };
 
 export default function PredictionLoader() {
+    const { colors } = useTheme();
     const scale1 = useSharedValue(1);
     const scale2 = useSharedValue(1);
     const scale3 = useSharedValue(1);
@@ -52,19 +54,27 @@ export default function PredictionLoader() {
 
             <View className="items-center justify-center">
                 <View className="relative w-40 h-40 items-center justify-center mb-10">
-                    <View className="absolute w-32 h-32 bg-blue-400/20 blur-3xl rounded-full" />
+                    <View
+                        className="absolute w-32 h-32 blur-3xl rounded-full"
+                        style={{ backgroundColor: `${colors['--primary']}20` }}
+                    />
 
                     <View className="relative">
                         {/* Main Icon Group */}
-                        <MaterialCommunityIcons name="account-cog" size={100} color="#3b82f6" style={{ opacity: 0.8 }} />
+                        <MaterialCommunityIcons
+                            name="account-cog"
+                            size={100}
+                            color={colors['--primary']}
+                            style={{ opacity: 0.8 }}
+                        />
 
                         {/* Floating Small Icons */}
                         <Animated.View style={[{ position: 'absolute', top: -10, right: -10 }, gearStyle]}>
-                            <MaterialCommunityIcons name="cog" size={32} color="#60a5fa" />
+                            <MaterialCommunityIcons name="cog" size={32} color={colors['--accent']} />
                         </Animated.View>
 
                         <Animated.View style={[{ position: 'absolute', bottom: 10, left: -20 }]}>
-                            <MaterialCommunityIcons name="brain" size={40} color="#93c5fd" />
+                            <MaterialCommunityIcons name="brain" size={40} color={colors['--accent']} style={{ opacity: 0.6 }} />
                         </Animated.View>
 
                         <View style={{ position: 'absolute', top: 10, left: -30 }}>
@@ -79,9 +89,9 @@ export default function PredictionLoader() {
                 </Text>
 
                 <View className="flex-row gap-4">
-                    <Animated.View style={[styles.dot, dotStyle1]} />
-                    <Animated.View style={[styles.dot, dotStyle2]} />
-                    <Animated.View style={[styles.dot, dotStyle3]} />
+                    <Animated.View style={[styles.dot, { backgroundColor: colors['--primary'] }, dotStyle1]} />
+                    <Animated.View style={[styles.dot, { backgroundColor: colors['--primary'] }, dotStyle2]} />
+                    <Animated.View style={[styles.dot, { backgroundColor: colors['--primary'] }, dotStyle3]} />
                 </View>
             </View>
         </View>
@@ -100,6 +110,6 @@ const styles = StyleSheet.create({
         width: 12,
         height: 12,
         borderRadius: 6,
-        backgroundColor: '#3b82f6',
     }
 });
+

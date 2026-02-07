@@ -39,9 +39,26 @@ export default function LoginScreen() {
 
     useEffect(() => {
         if (isAuthenticated && user) {
-            dispatch(checkOnboardingStatus()).unwrap().then((status: OnboardingStatus) => {
-                performRedirect(status);
-            });
+            dispatch(checkOnboardingStatus())
+                .unwrap()
+                .then((status: OnboardingStatus) => {
+                    performRedirect(status);
+                })
+                .catch((err: any) => {
+                    // Check if error is related to missing age
+                    const errorMessage = typeof err === 'string' ? err : err?.message || '';
+                    if (errorMessage.includes('Age is required')) {
+                        console.log('👉 [LOGIN] Age missing, redirecting to age selection');
+                        router.replace({
+                            pathname: '/(onboarding)/age' as any,
+                            params: { toastMessage: 'Please set your age to continue' }
+                        });
+                    } else {
+                        // For other errors, we might want to show a toast or stay on login
+                        console.error('❌ [LOGIN] Profile check failed:', err);
+                        showToast(errorMessage, 'error');
+                    }
+                });
         }
     }, [isAuthenticated, user, dispatch]);
 
@@ -88,7 +105,6 @@ export default function LoginScreen() {
                     title={toastStatus === 'error' ? 'Error' : 'Notification'}
                     description={toastMessage}
                     status={toastStatus}
-                    className="absolute top-12 left-0 right-0 z-50 shadow-lg"
                 />
             )}
 

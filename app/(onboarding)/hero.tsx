@@ -22,6 +22,8 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
 import '../../global.css';
+import { CustomToast } from '../../src/components/CustomToast';
+import { useRedirectToast } from '../../src/hooks/useRedirectToast';
 import { updateUserProfile } from '../../src/store/slices/authSlice';
 
 const { width } = Dimensions.get('window');
@@ -250,6 +252,8 @@ export default function HeroSelectionScreen() {
     const scrollX = useSharedValue(0);
     const [selectedIndex, setSelectedIndex] = useState(0);
 
+    const { visible: toastVisible, message: toastMessage } = useRedirectToast();
+
     const activeIndex = useDerivedValue(() => {
         return Math.round(scrollX.value / ITEM_WIDTH);
     });
@@ -292,7 +296,15 @@ export default function HeroSelectionScreen() {
     });
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
+        <SafeAreaView className="flex-1 bg-white relative">
+            {toastVisible && (
+                <CustomToast
+                    id="hero-redirect-toast"
+                    title="Action Required"
+                    description={toastMessage}
+                    status="info"
+                />
+            )}
             <View className="flex-1">
                 {/* Navigation Header */}
                 <View className="flex-row items-center justify-between px-6 pt-2 pb-2">

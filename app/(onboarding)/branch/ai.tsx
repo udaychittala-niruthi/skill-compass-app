@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import '../../../global.css';
 import { AICard } from '../../../src/components/AICard';
+import { CustomToast } from '../../../src/components/CustomToast';
 import PredictionLoader from '../../../src/components/PredictionLoader';
 import { PrimaryButton } from '../../../src/components/PrimaryButton';
 import { useTheme } from '../../../src/context/ThemeContext';
@@ -25,6 +26,8 @@ export default function BranchAIScreen() {
 
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
     const [isPredicting, setIsPredicting] = useState(true);
+    const [toastVisible, setToastVisible] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
 
     const courseId = params.courseId ? Number(params.courseId) : 0;
     const courseIcon = (params.courseIcon as string) || 'school';
@@ -50,9 +53,15 @@ export default function BranchAIScreen() {
 
         try {
             await Promise.all([predictPromise, delayPromise]);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Prediction failed:', err);
-            router.replace({ pathname: '/(onboarding)/branch/manual', params } as any);
+            const errorMessage = typeof err === 'string' ? err : err?.message || 'AI prediction failed. Please try manual selection.';
+            setToastMessage(errorMessage);
+            setToastVisible(true);
+            // Redirect after showing toast for 2 seconds
+            setTimeout(() => {
+                router.replace({ pathname: '/(onboarding)/branch/manual', params } as any);
+            }, 2000);
         } finally {
             setIsPredicting(false);
         }
@@ -68,8 +77,11 @@ export default function BranchAIScreen() {
                 await dispatch(onboardProfessional({ currentRole: '', industry: '', yearsOfExperience: 0, skills: selectedSkills, bio: '' })).unwrap();
             }
             router.replace('/(tabs)' as any);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Finalization failed:', err);
+            const errorMessage = typeof err === 'string' ? err : err?.message || 'Failed to finalize. Please try again.';
+            setToastMessage(errorMessage);
+            setToastVisible(true);
         }
     };
 
@@ -77,6 +89,16 @@ export default function BranchAIScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-slate-50">
+            {/* Error Toast */}
+            {toastVisible && (
+                <CustomToast
+                    id="branch-ai-error-toast"
+                    title="Error"
+                    description={toastMessage}
+                    status="error"
+                />
+            )}
+
             {/* Header */}
             <View className="flex-row items-center justify-between px-6 py-4">
                 <TouchableOpacity
@@ -87,7 +109,7 @@ export default function BranchAIScreen() {
                 </TouchableOpacity>
 
                 <View className="flex-row gap-1.5">
-                    <View className="h-1.5 w-6 rounded-full bg-blue-600" />
+                    <View className="h-1.5 w-6 rounded-full" style={{ backgroundColor: colors['--primary'] }} />
                 </View>
 
                 <View className="w-10" />
@@ -119,7 +141,7 @@ export default function BranchAIScreen() {
                         className="items-center py-10"
                         activeOpacity={0.7}
                     >
-                        <Text className="text-blue-600 font-bold text-base" style={{ color: colors['--primary'] }}>
+                        <Text className="font-bold text-base" style={{ color: colors['--primary'] }}>
                             Browse All Specializations
                         </Text>
                     </TouchableOpacity>
@@ -127,14 +149,17 @@ export default function BranchAIScreen() {
             </ScrollView>
 
             <View className="px-8 pb-8 pt-2 bg-slate-50">
-                <PrimaryButton
-                    title="Finalize Path"
-                    iconName="verified"
-                    onPress={handleFinalize}
-                    disabled={!selectedBranchId}
-                    style={!selectedBranchId ? { opacity: 0.5 } : {}}
-                />
+                {
+                    selectedBranchId && (
+                        <PrimaryButton
+                            title="Finalize Path"
+                            iconName="verified"
+                            onPress={handleFinalize}
+                        />
+                    )
+                }
             </View>
         </SafeAreaView>
     );
 }
+

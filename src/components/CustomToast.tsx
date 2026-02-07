@@ -1,7 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import React from 'react';
-import { Text, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../context/ThemeContext';
 
 interface CustomToastProps {
     id: string;
@@ -13,7 +16,10 @@ interface CustomToastProps {
     className?: string;
 }
 
-export const CustomToast = ({ id, status = 'info', title, description, variant = 'solid', style, className }: CustomToastProps) => {
+export const CustomToast = ({ id, status = 'info', title, description, variant = 'solid', style }: CustomToastProps) => {
+    const { colors } = useTheme();
+    const insets = useSafeAreaInsets();
+
     const getIconName = () => {
         switch (status) {
             case 'success': return 'check-circle';
@@ -23,29 +29,97 @@ export const CustomToast = ({ id, status = 'info', title, description, variant =
         }
     };
 
-    const getColors = () => {
+    const getStatusConfig = () => {
         switch (status) {
-            case 'success': return { bg: 'bg-green-100', border: 'border-green-500', text: 'text-green-800', icon: 'green' };
-            case 'error': return { bg: 'bg-red-100', border: 'border-red-500', text: 'text-red-800', icon: 'red' };
-            case 'warning': return { bg: 'bg-yellow-100', border: 'border-yellow-500', text: 'text-yellow-800', icon: 'orange' };
-            case 'info': default: return { bg: 'bg-blue-100', border: 'border-blue-500', text: 'text-blue-800', icon: 'blue' };
+            case 'success':
+                return {
+                    icon: '#22c55e',
+                    accentColor: '#22c55e',
+                    textColor: '#14532d',
+                    borderColor: 'border-green-200/50',
+                };
+            case 'error':
+                return {
+                    icon: '#ef4444',
+                    accentColor: '#ef4444',
+                    textColor: '#b91c1c',
+                    borderColor: 'border-red-200/50',
+                };
+            case 'warning':
+                return {
+                    icon: '#f59e0b',
+                    accentColor: '#f59e0b',
+                    textColor: '#92400e',
+                    borderColor: 'border-yellow-200/50',
+                };
+            case 'info':
+            default:
+                return {
+                    icon: colors['--primary'],
+                    accentColor: colors['--primary'],
+                    textColor: colors['--primary'],
+                    borderColor: 'border-white/40',
+                };
         }
     };
 
-    const colors = getColors();
+    const config = getStatusConfig();
 
     return (
-        <Animated.View
-            entering={FadeInUp.springify().damping(15)}
-            exiting={FadeOutUp}
-            className={`mx-4 p-4 rounded-lg flex-row items-start shadow-sm border ${colors.bg} ${colors.border} ${className || ''}`}
-            style={[{ elevation: 2 }, style]}
+        <View
+            style={[StyleSheet.absoluteFillObject, { zIndex: 9999 }]}
+            pointerEvents="box-none"
         >
-            <MaterialIcons name={getIconName()} size={24} color={colors.icon} style={{ marginRight: 12, marginTop: 2 }} />
-            <View className="flex-1">
-                <Text className={`font-bold text-base mb-1 ${colors.text}`}>{title}</Text>
-                {description && <Text className={`text-sm ${colors.text} opacity-90`}>{description}</Text>}
-            </View>
-        </Animated.View>
+            <Animated.View
+                entering={FadeInUp.springify().damping(15)}
+                exiting={FadeOutUp}
+                style={[{
+                    marginHorizontal: 24,
+                    marginTop: insets.top + 12,
+                    borderRadius: 24,
+                    overflow: 'hidden',
+                    elevation: 10,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 10 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 20
+                }, style]}
+            >
+                <BlurView
+                    intensity={80}
+                    tint="light"
+                    className={`p-5 flex-row items-center border ${config.borderColor}`}
+                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
+                >
+
+                    <View
+                        className="mr-2 mt-1 bg-white p-2 rounded-2xl border border-black/10"
+                    >
+                        <MaterialIcons name={getIconName()} size={24} color={config.icon} />
+                    </View>
+
+                    <View className="flex-1">
+                        <Text
+                            className="font-bold text-lg mb-0.5"
+                            style={{
+                                color: status === 'error' ? config.textColor : '#0f172a',
+                            }}
+                        >
+                            {title}
+                        </Text>
+                        {description && (
+                            <Text
+                                className="text-sm font-medium leading-5"
+                                style={{
+                                    color: status === 'error' ? config.textColor : '#64748b',
+                                }}
+                            >
+                                {description}
+                            </Text>
+                        )}
+                    </View>
+                </BlurView>
+            </Animated.View>
+        </View>
     );
 };

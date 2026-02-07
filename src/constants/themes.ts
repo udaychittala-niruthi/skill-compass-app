@@ -87,3 +87,23 @@ export const THEMES: Record<ThemeType, ThemeColors> = {
         'text-secondary': '#9ca3af',
     },
 };
+
+/**
+ * Maps backend group names to theme types
+ */
+export const mapGroupToTheme = (group: string | null | undefined): ThemeType => {
+    switch (group?.toUpperCase()) {
+        case 'KIDS':
+            return 'kid';
+        case 'TEENS':
+            return 'teen';
+        case 'COLLEGE_STUDENTS':
+            return 'student';
+        case 'PROFESSIONALS':
+            return 'professional';
+        case 'SENIORS':
+            return 'senior';
+        default:
+            return 'student'; // Default theme
+    }
+};
