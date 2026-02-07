@@ -24,7 +24,7 @@ export default function SplashScreen() {
         };
 
         checkAuth();
-    }, [isAuthenticated]);
+    }, [isAuthenticated, router]);
 
     return (
         <SafeAreaView className="flex-1 justify-center items-center bg-white dark:bg-black">

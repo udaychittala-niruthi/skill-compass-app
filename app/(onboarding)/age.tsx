@@ -15,6 +15,7 @@ import Animated, {
     Extrapolation,
     interpolate,
     runOnJS,
+    SharedValue,
     useAnimatedReaction,
     useAnimatedScrollHandler,
     useAnimatedStyle,
@@ -46,8 +47,8 @@ const AgeItem = React.memo(({
 }: {
     item: number,
     index: number,
-    scrollX: Animated.SharedValue<number>,
-    activeColor: Animated.SharedValue<string>
+    scrollX: SharedValue<number>,
+    activeColor: SharedValue<string>
 }) => {
     const animatedStyle = useAnimatedStyle(() => {
         const position = scrollX.value / ITEM_WIDTH;
@@ -74,8 +75,8 @@ const AgeItem = React.memo(({
         };
     });
 
-    const createBlurStyle = (alphaHex: string) => {
-        return useAnimatedStyle(() => {
+    const BlurCircle = ({ opacityHex, size, radius }: { opacityHex: string, size: number, radius: number }) => {
+        const animatedStyle = useAnimatedStyle(() => {
             const position = scrollX.value / ITEM_WIDTH;
             const distance = Math.abs(position - index);
 
@@ -96,53 +97,33 @@ const AgeItem = React.memo(({
             return {
                 opacity: backgroundOpacity,
                 transform: [{ scale: backgroundScale }],
-                backgroundColor: activeColor.value + alphaHex,
+                backgroundColor: activeColor.value + opacityHex,
             };
         });
-    };
 
-    const blur1 = createBlurStyle('0F'); // ~6% opacity
-    const blur2 = createBlurStyle('18'); // ~9% opacity
-    const blur3 = createBlurStyle('26'); // ~15% opacity
+        return (
+            <Animated.View
+                style={[
+                    {
+                        position: 'absolute',
+                        width: size,
+                        height: size,
+                        borderRadius: radius,
+                    },
+                    animatedStyle
+                ]}
+            />
+        );
+    };
 
     return (
         <View style={{ width: ITEM_WIDTH }} className="items-center justify-center h-48">
             {/* Outer glow - largest, most subtle */}
-            <Animated.View
-                style={[
-                    {
-                        position: 'absolute',
-                        width: 140,
-                        height: 140,
-                        borderRadius: 70,
-                    },
-                    blur1
-                ]}
-            />
+            <BlurCircle opacityHex="0F" size={140} radius={70} />
             {/* Middle glow */}
-            <Animated.View
-                style={[
-                    {
-                        position: 'absolute',
-                        width: 120,
-                        height: 120,
-                        borderRadius: 60,
-                    },
-                    blur2
-                ]}
-            />
+            <BlurCircle opacityHex="18" size={120} radius={60} />
             {/* Inner glow - most visible */}
-            <Animated.View
-                style={[
-                    {
-                        position: 'absolute',
-                        width: 95,
-                        height: 95,
-                        borderRadius: 55,
-                    },
-                    blur3
-                ]}
-            />
+            <BlurCircle opacityHex="26" size={95} radius={55} />
             <Animated.Text
                 allowFontScaling={false}
                 style={[
@@ -175,6 +156,7 @@ export default function AgeSelectionScreen() {
     const activeMetaIndex = useDerivedValue(() => {
         return Math.max(0, Math.min(AGES.length - 1, activeIndex.value));
     });
+    AgeItem.displayName = 'AgeItem';
 
     const activeMeta = useDerivedValue(() => {
         return AGE_META[activeMetaIndex.value];
@@ -228,7 +210,7 @@ export default function AgeSelectionScreen() {
 
     useEffect(() => {
         setTimeout(() => scrollToAge(16, false), 100);
-    }, []);
+    }, [scrollToAge]);
 
     const circleStyle = useAnimatedStyle(() => ({
         backgroundColor: activeColor.value + '20',

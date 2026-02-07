@@ -2,10 +2,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import '../../global.css';
+import { CustomToast } from '../../src/components/CustomToast';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { PrimaryInput } from '../../src/components/PrimaryInput';
 import { useTheme } from '../../src/context/ThemeContext';
@@ -21,26 +22,87 @@ export default function RegisterScreen() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string }>({});
+
+    // Toast State
+    const [toastVisible, setToastVisible] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
+    const [toastStatus, setToastStatus] = useState<'success' | 'error' | 'info' | 'warning'>('info');
+
+    const showToast = (message: string, status: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+        setToastMessage(message);
+        setToastStatus(status);
+        setToastVisible(true);
+        setTimeout(() => setToastVisible(false), 3000);
+    };
 
     useEffect(() => {
         if (isAuthenticated) {
             router.replace('/(onboarding)/age');
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, router]);
 
     useEffect(() => {
         if (error) {
-            Alert.alert('Registration Failed', error);
+            showToast(error, 'error');
             dispatch(clearError());
         }
-    }, [error]);
+    }, [error, dispatch]);
+
+    const validate = () => {
+        let valid = true;
+        let newErrors: { name?: string; email?: string; password?: string; confirmPassword?: string } = {};
+
+        if (!name) {
+            newErrors.name = 'Name is required';
+            valid = false;
+        }
+
+        if (!email) {
+            newErrors.email = 'Email is required';
+            valid = false;
+        } else if (!/\S+@\S+\.\S+/.test(email)) {
+            newErrors.email = 'Email is invalid';
+            valid = false;
+        }
+
+        if (!password) {
+            newErrors.password = 'Password is required';
+            valid = false;
+        } else if (password.length < 6) {
+            newErrors.password = 'Password must be at least 6 characters';
+            valid = false;
+        }
+
+        if (confirmPassword !== password) {
+            newErrors.confirmPassword = 'Passwords do not match';
+            valid = false;
+        }
+
+        setErrors(newErrors);
+        return valid;
+    };
 
     const handleRegister = () => {
-        dispatch(registerUser({ name, email, password }));
+        if (validate()) {
+            dispatch(registerUser({ name, email, password }));
+        }
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-background-neutral">
+        <SafeAreaView className="flex-1 bg-background-neutral relative">
+            {/* Toast Container */}
+            {toastVisible && (
+                <CustomToast
+                    id="register-toast"
+                    title={toastStatus === 'error' ? 'Error' : 'Notification'}
+                    description={toastMessage}
+                    status={toastStatus}
+                    className="absolute top-12 left-0 right-0 z-50 shadow-lg"
+                />
+            )}
+
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 className="flex-1"
@@ -95,9 +157,10 @@ export default function RegisterScreen() {
                                 <PrimaryInput
                                     placeholder="Alex Thompson"
                                     value={name}
-                                    onChangeText={setName}
+                                    onChangeText={(text) => { setName(text); setErrors({ ...errors, name: '' }); }}
                                     autoCapitalize="words"
                                     iconName="person-outline"
+                                    errorMessage={errors.name}
                                 />
                             </View>
 
@@ -106,10 +169,11 @@ export default function RegisterScreen() {
                                 <PrimaryInput
                                     placeholder="alex@example.com"
                                     value={email}
-                                    onChangeText={setEmail}
+                                    onChangeText={(text) => { setEmail(text); setErrors({ ...errors, email: '' }); }}
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                     iconName="alternate-email"
+                                    errorMessage={errors.email}
                                 />
                             </View>
 
@@ -118,9 +182,22 @@ export default function RegisterScreen() {
                                 <PrimaryInput
                                     placeholder="••••••••"
                                     value={password}
-                                    onChangeText={setPassword}
+                                    onChangeText={(text) => { setPassword(text); setErrors({ ...errors, password: '', confirmPassword: '' }); }}
                                     isPassword
                                     iconName="lock-outline"
+                                    errorMessage={errors.password}
+                                />
+                            </View>
+
+                            <View>
+                                <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Confirm Password</Text>
+                                <PrimaryInput
+                                    placeholder="••••••••"
+                                    value={confirmPassword}
+                                    onChangeText={(text) => { setConfirmPassword(text); setErrors({ ...errors, confirmPassword: '' }); }}
+                                    isPassword
+                                    iconName="lock-outline"
+                                    errorMessage={errors.confirmPassword}
                                 />
                             </View>
 

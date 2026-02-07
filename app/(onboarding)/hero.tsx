@@ -16,7 +16,7 @@ import Animated, {
     useAnimatedStyle,
     useDerivedValue,
     useSharedValue,
-    withSpring,
+    type SharedValue
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
@@ -72,14 +72,14 @@ const HEROES = [
     },
 ];
 
-const HeroItem = React.memo(({
+const HeroItemComponent = ({
     hero,
     index,
     scrollX,
 }: {
     hero: typeof HEROES[0];
     index: number;
-    scrollX: Animated.SharedValue<number>;
+    scrollX: SharedValue<number>;
 }) => {
     const animatedStyle = useAnimatedStyle(() => {
         const position = scrollX.value / ITEM_WIDTH;
@@ -191,7 +191,54 @@ const HeroItem = React.memo(({
             </View>
         </Animated.View>
     );
+};
+
+const HeroItem = React.memo(HeroItemComponent);
+HeroItem.displayName = 'HeroItem';
+
+const HeroDot = React.memo(({
+    index,
+    scrollX,
+    color
+}: {
+    index: number;
+    scrollX: SharedValue<number>;
+    color: string;
+}) => {
+    const animatedStyle = useAnimatedStyle(() => {
+        const position = scrollX.value / ITEM_WIDTH;
+        const distance = Math.abs(position - index);
+
+        const opacity = interpolate(
+            distance,
+            [0, 1],
+            [1, 0.3],
+            Extrapolation.CLAMP
+        );
+
+        const scale = interpolate(
+            distance,
+            [0, 1],
+            [1.2, 1],
+            Extrapolation.CLAMP
+        );
+
+        return {
+            opacity,
+            transform: [{ scale }],
+            backgroundColor: color,
+        };
+    });
+
+    return (
+        <Animated.View
+            style={[animatedStyle]}
+            className="w-3 h-3 rounded-full mx-1"
+        />
+    );
 });
+HeroDot.displayName = 'HeroDot';
+
 
 export default function HeroSelectionScreen() {
     const router = useRouter();
@@ -233,7 +280,7 @@ export default function HeroSelectionScreen() {
             }
         }, 100);
         return () => clearInterval(interval);
-    }, [selectedIndex]);
+    }, [selectedIndex, scrollX]);
 
     const buttonStyle = useAnimatedStyle(() => {
         const hero = HEROES[Math.min(activeIndex.value, HEROES.length - 1)];
@@ -309,35 +356,19 @@ export default function HeroSelectionScreen() {
 
                     {/* Pagination Dots */}
                     <View className="flex-row justify-center gap-2 mt-8">
-                        {HEROES.map((_, index) => {
-                            const dotStyle = useAnimatedStyle(() => {
-                                const isActive = Math.round(scrollX.value / ITEM_WIDTH) === index;
-                                return {
-                                    width: withSpring(isActive ? 24 : 8),
-                                    backgroundColor: isActive
-                                        ? HEROES[index].color
-                                        : '#cbd5e1',
-                                };
-                            });
-
-                            return (
-                                <Animated.View
-                                    key={index}
-                                    style={[
-                                        {
-                                            height: 8,
-                                            borderRadius: 4,
-                                        },
-                                        dotStyle,
-                                    ]}
-                                />
-                            );
-                        })}
+                        {HEROES.map((hero, index) => (
+                            <HeroDot
+                                key={hero.id}
+                                index={index}
+                                scrollX={scrollX}
+                                color={hero.color}
+                            />
+                        ))}
                     </View>
                 </View>
 
                 {/* Sticky Bottom Action Button */}
-                <View className="bg-white px-6 py-6 border-t border-slate-100">
+                <View className="bg-white px-6 py-2 border-t border-slate-100">
                     <Animated.View>
                         <TouchableOpacity
                             onPress={handleNext}
@@ -357,7 +388,7 @@ export default function HeroSelectionScreen() {
                                 className="flex-row w-full items-center justify-center gap-3 rounded-full h-16 px-5"
                             >
                                 <Text className="text-white text-xl font-black leading-normal tracking-wide uppercase">
-                                    LET'S GO!
+                                    LET&apos;S GO!
                                 </Text>
                                 <MaterialIcons name="rocket-launch" size={24} color="white" />
                             </Animated.View>

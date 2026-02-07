@@ -1,4 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import api, { removeAuthToken, setAuthToken } from '../../services/api';
 
 // Define types
 interface User {
@@ -29,46 +30,77 @@ const initialState: AuthState = {
 
 // Async Thunks
 
-// Mock login for now since we don't have a real backend
+// Helper to extract error message
+const extractErrorMessage = (err: any): string => {
+    if (err.response) {
+        const data = err.response.data;
+        if (data && typeof data === 'object') {
+            if (data.message) return data.message;
+            if (data.error) return data.error;
+        }
+        if (typeof data === 'string') return data;
+    }
+    return err.message || 'An unexpected error occurred';
+};
+
 export const loginUser = createAsyncThunk(
     'auth/login',
     async (credentials: { email: string; password: string }, { rejectWithValue }) => {
         try {
-            // Simulate API call
-            // const response = await client.post('/auth/login', credentials);
-            // return response.data;
+            const response = await api.post('/auth/login', credentials);
+            const { token, user } = response.data; // Adjust based on actual API response structure
 
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            if (credentials.email === 'error@example.com') {
-                throw new Error('Invalid credentials');
+            if (token) {
+                await setAuthToken(token);
             }
 
-            return {
-                user: { id: '1', name: 'Test User', email: credentials.email },
-                token: 'mock-jwt-token-123',
-            };
+            return { user, token };
         } catch (err: any) {
-            // Use rejectWithValue to pass custom error payload
-            return rejectWithValue(err.message || 'Login failed');
+            return rejectWithValue(extractErrorMessage(err));
         }
     }
 );
 
 export const registerUser = createAsyncThunk(
     'auth/register',
-    async (userData: { name: string; email: string; password: string }, { rejectWithValue }) => {
+    async (userData: { name: string; email: string; password: string; age?: number }, { rejectWithValue }) => {
         try {
-            // Simulate API call
-            // const response = await client.post('/auth/register', userData);
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const response = await api.post('/auth/register', userData);
+            const { token, user } = response.data; // Adjust based on actual API response structure
 
-            return {
-                user: { id: '2', name: userData.name, email: userData.email },
-                token: 'mock-jwt-token-456',
-            };
+            if (token) {
+                await setAuthToken(token);
+            }
+
+            return { user, token };
         } catch (err: any) {
-            return rejectWithValue(err.message || 'Registration failed');
+            return rejectWithValue(extractErrorMessage(err));
+        }
+    }
+);
+
+
+
+export const updateProfile = createAsyncThunk(
+    'auth/updateProfile',
+    async (data: Partial<User>, { rejectWithValue }) => {
+        try {
+            const response = await api.put('/users/profile', data);
+            return response.data;
+        } catch (err: any) {
+            return rejectWithValue(extractErrorMessage(err));
+        }
+    }
+);
+
+export const checkOnboardingStatus = createAsyncThunk(
+    'auth/checkStatus',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await api.get('/onboarding/status');
+            return response.data;
+        } catch (err: any) {
+            return rejectWithValue(extractErrorMessage(err));
         }
     }
 );
@@ -82,6 +114,7 @@ const authSlice = createSlice({
             state.token = null;
             state.isAuthenticated = false;
             state.error = null;
+            removeAuthToken(); // Side effect: remove token from storage
         },
         clearError: (state) => {
             state.error = null;
@@ -123,6 +156,21 @@ const authSlice = createSlice({
         builder.addCase(registerUser.rejected, (state, action) => {
             state.loading = false;
             state.error = action.payload as string;
+        });
+
+
+
+        // Update Profile
+        builder.addCase(updateProfile.fulfilled, (state, action) => {
+            if (state.user) {
+                state.user = { ...state.user, ...action.payload };
+            }
+        });
+
+        // Check Onboarding Status - mostly updates user state if needed
+        builder.addCase(checkOnboardingStatus.fulfilled, (state, action) => {
+            // Logic depends on what status returns, assuming it might return user details or flags
+            // For now, logging or handling specific flags if implementation requires
         });
     },
 });
