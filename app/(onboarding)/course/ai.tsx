@@ -1,21 +1,21 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import '../../../global.css';
-import { AICard } from '../../../src/components/AICard';
-import { CustomToast } from '../../../src/components/CustomToast';
+import { AICard } from '../../../src/components/onboarding/AICard';
 import PredictionLoader from '../../../src/components/PredictionLoader';
 import { PrimaryButton } from '../../../src/components/PrimaryButton';
 import { useTheme } from '../../../src/context/ThemeContext';
+import { useToast } from '../../../src/context/ToastContext';
 import { AppDispatch, RootState } from '../../../src/store';
 import { predictCourse } from '../../../src/store/slices/commonSlice';
 
 export default function CourseAIScreen() {
     const router = useRouter();
+    const navigation = useNavigation();
     const dispatch = useDispatch<AppDispatch>();
     const { colors } = useTheme();
     const { predictions, selectedInterests, selectedSkills } = useSelector((state: RootState) => state.common);
@@ -23,8 +23,7 @@ export default function CourseAIScreen() {
 
     const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
     const [isPredicting, setIsPredicting] = useState(true);
-    const [toastVisible, setToastVisible] = useState(false);
-    const [toastMessage, setToastMessage] = useState('');
+    const { showToast } = useToast();
 
     useEffect(() => {
         handleAIPredict();
@@ -54,12 +53,8 @@ export default function CourseAIScreen() {
         } catch (err: any) {
             console.error('Prediction failed:', err);
             const errorMessage = typeof err === 'string' ? err : err?.message || 'AI prediction failed. Please try manual selection.';
-            setToastMessage(errorMessage);
-            setToastVisible(true);
-            // Redirect after showing toast for 2 seconds
-            setTimeout(() => {
-                router.replace('/(onboarding)/course/manual' as any);
-            }, 2000);
+            showToast(errorMessage, { status: 'error', title: 'Error' });
+            setTimeout(() => router.replace('/(onboarding)/course/manual' as any), 2000);
         } finally {
             setIsPredicting(false);
         }
@@ -83,24 +78,18 @@ export default function CourseAIScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-slate-50">
-            {/* Error Toast */}
-            {toastVisible && (
-                <CustomToast
-                    id="course-ai-error-toast"
-                    title="Error"
-                    description={toastMessage}
-                    status="error"
-                />
-            )}
-
             {/* Header */}
             <View className="flex-row items-center justify-between px-6 py-4">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="w-10 h-10 rounded-full bg-white shadow-sm items-center justify-center"
-                >
-                    <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
-                </TouchableOpacity>
+                {navigation.canGoBack() && (navigation.getState()?.index ?? 0) > 0 ? (
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="w-10 h-10 rounded-full bg-white shadow-sm items-center justify-center"
+                    >
+                        <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
+                    </TouchableOpacity>
+                ) : (
+                    <View className="w-10" />
+                )}
 
                 <View className="flex-row gap-1.5">
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />

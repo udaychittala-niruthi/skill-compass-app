@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import { mapGroupToTheme } from '../constants/themes';
 import { useTheme } from '../context/ThemeContext';
 import { OnboardingStatus } from '../types/auth';
@@ -9,7 +9,6 @@ type RedirectOptions = {
 };
 
 export const useOnboardingRedirect = () => {
-    const router = useRouter();
     const { setTheme } = useTheme();
 
     const getRedirectPath = (
@@ -42,19 +41,33 @@ export const useOnboardingRedirect = () => {
         }
 
         if (!status.isOnboarded) {
-            const hasCourse = !!status.preferences?.courseId;
+            const group = status.group;
+            const prefs = status.preferences;
+            const hasCourse = !!prefs?.courseId;
+            const hasBranch = !!prefs?.branchId;
+            const hasLearningStyle = !!prefs?.learningStyle;
 
-            if (!hasCourse) {
-                return {
-                    path: '/(onboarding)/course',
-                    reason: 'Select a course to personalize your roadmap',
-                };
+            if (group === 'PROFESSIONALS') {
+                if (!hasCourse) return { path: '/(onboarding)/course', reason: 'Select a course to personalize your roadmap' };
+                if (!hasBranch) return { path: '/(onboarding)/branch', reason: 'Choose a specialization' };
+                if (!prefs?.industry && !prefs?.currentRole) return { path: '/(onboarding)/profile/', reason: 'Complete your professional profile' };
+                return { path: '/(onboarding)/profile/learning-style', reason: 'Tell us how you learn best' };
             }
 
-            return {
-                path: '/(onboarding)/branch',
-                reason: 'Choose a specialization to finish setup',
-            };
+            if (group === 'COLLEGE_STUDENTS') {
+                if (!hasCourse) return { path: '/(onboarding)/course', reason: 'Select a course to personalize your roadmap' };
+                if (!hasBranch) return { path: '/(onboarding)/branch', reason: 'Choose a specialization' };
+                return { path: '/(onboarding)/profile/learning-style', reason: 'Tell us how you learn best' };
+            }
+
+            if (group === 'TEENS' || group === 'SENIORS') {
+                // For teens and seniors, course/branch is optional
+                // Redirect directly to learning style
+                return { path: '/(onboarding)/profile/learning-style', reason: 'Final step: Tell us how you learn best' };
+            }
+
+            // Fallback for other groups
+            return { path: '/(onboarding)/profile/learning-style', reason: 'Complete your profile setup' };
         }
 
         return { path: '/(tabs)' };

@@ -1,13 +1,10 @@
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Dimensions,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
     Text,
     TextInput,
     TouchableOpacity,
@@ -29,9 +26,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import '../../global.css';
-import { CustomToast } from '../../src/components/CustomToast';
+import { KeyboardAwareScrollView } from '../../src/components/KeyboardAwareScrollView';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
+import { mapGroupToTheme } from '../../src/constants/themes';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useRedirectToast } from '../../src/hooks/useRedirectToast';
 import { AppDispatch } from '../../src/store';
@@ -155,10 +152,11 @@ AgeItem.displayName = 'AgeItem';
 
 export default function AgeSelectionScreen() {
     const router = useRouter();
+    const navigation = useNavigation();
     const dispatch = useDispatch<AppDispatch>();
     const { setTheme } = useTheme();
+    const { colors } = useTheme();
     const listRef = useRef<any>(null);
-    const scrollViewRef = useRef<Animated.ScrollView>(null);
     const textInputRef = useRef<TextInput>(null);
 
     const scrollX = useSharedValue(0);
@@ -171,7 +169,7 @@ export default function AgeSelectionScreen() {
     const [activeAgeNum, setActiveAgeNum] = useState(0);
     const [showError, setShowError] = useState(false);
 
-    const { visible: toastVisible, message: toastMessage } = useRedirectToast();
+    useRedirectToast();
 
     const activeIndex = useDerivedValue(() => {
         return Math.round(scrollX.value / ITEM_WIDTH);
@@ -249,30 +247,6 @@ export default function AgeSelectionScreen() {
         }
     }, [activeAgeNum, showError]);
 
-    // Handle keyboard events to scroll input into view
-    useEffect(() => {
-        const keyboardWillShow = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-            (e) => {
-                // Scroll to bottom when keyboard appears
-                setTimeout(() => {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 100);
-            }
-        );
-
-        const keyboardWillHide = Keyboard.addListener(
-            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-            () => {
-            }
-        );
-
-        return () => {
-            keyboardWillShow.remove();
-            keyboardWillHide.remove();
-        };
-    }, []);
-
     const circleStyle = useAnimatedStyle(() => ({
         backgroundColor: activeColor.value + '20',
     }));
@@ -289,24 +263,20 @@ export default function AgeSelectionScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-white relative">
-            {toastVisible && (
-                <CustomToast
-                    id="age-redirect-toast"
-                    title="Action Required"
-                    description={toastMessage}
-                    status="info"
-                />
-            )}
             <View className="flex-row items-center justify-between px-6 py-4">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="w-10 h-10 rounded-full border border-slate-100 items-center justify-center bg-white shadow-sm"
-                >
-                    <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
-                </TouchableOpacity>
+                {navigation.canGoBack() && (navigation.getState()?.index ?? 0) > 0 ? (
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="w-10 h-10 rounded-full border border-slate-100 items-center justify-center bg-white shadow-sm"
+                    >
+                        <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
+                    </TouchableOpacity>
+                ) : (
+                    <View className="w-10" />
+                )}
 
                 <View className="flex-row gap-1.5">
-                    <View className="h-1.5 w-8 rounded-full bg-blue-600" />
+                    <View className="h-1.5 w-8 rounded-full" style={{ backgroundColor: colors["--primary"] }} />
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                 </View>
@@ -314,18 +284,12 @@ export default function AgeSelectionScreen() {
                 <View className="w-10" />
             </View>
 
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            <KeyboardAwareScrollView
                 className="flex-1"
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+                contentContainerStyle={{ flexGrow: 1, alignItems: 'center', paddingTop: 32, paddingBottom: 16 }}
+                keyboardShouldPersistTaps="handled"
+                bounces={false}
             >
-                <Animated.ScrollView
-                    ref={scrollViewRef}
-                    contentContainerStyle={{ flexGrow: 1, alignItems: 'center', paddingTop: 32, paddingBottom: 16 }}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                    bounces={false}
-                >
                     <Animated.View
                         style={[
                             {
@@ -424,11 +388,6 @@ export default function AgeSelectionScreen() {
                                     const age = Number(t);
                                     if (!isNaN(age) && age > 0 && age <= 100) scrollToAge(age);
                                 }}
-                                onFocus={() => {
-                                    setTimeout(() => {
-                                        scrollViewRef.current?.scrollToEnd({ animated: true });
-                                    }, 300);
-                                }}
                                 maxLength={3}
                                 selectTextOnFocus
                             />
@@ -456,6 +415,11 @@ export default function AgeSelectionScreen() {
                                     // Call updateAge API and wait for response
                                     const result = await dispatch(updateAge(activeAgeNum)).unwrap();
 
+                                    // Update theme to match age group
+                                    if (result.group) {
+                                        setTheme(mapGroupToTheme(result.group));
+                                    }
+
                                     // Navigate based on server's ageGroup response
                                     if (result.group === 'KIDS') {
                                         router.push('/(onboarding)/hero');
@@ -472,8 +436,7 @@ export default function AgeSelectionScreen() {
                             }}
                         />
                     </View>
-                </Animated.ScrollView>
-            </KeyboardAvoidingView>
+                </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }

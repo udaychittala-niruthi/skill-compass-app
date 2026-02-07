@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
     Dimensions,
@@ -21,8 +21,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch } from 'react-redux';
-import '../../global.css';
-import { CustomToast } from '../../src/components/CustomToast';
 import { useRedirectToast } from '../../src/hooks/useRedirectToast';
 import { updateUserProfile } from '../../src/store/slices/authSlice';
 
@@ -246,13 +244,14 @@ HeroDot.displayName = 'HeroDot';
 
 export default function HeroSelectionScreen() {
     const router = useRouter();
+    const navigation = useNavigation();
     const dispatch = useDispatch();
     const listRef = useRef<any>(null);
 
     const scrollX = useSharedValue(0);
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    const { visible: toastVisible, message: toastMessage } = useRedirectToast();
+    useRedirectToast();
 
     const activeIndex = useDerivedValue(() => {
         return Math.round(scrollX.value / ITEM_WIDTH);
@@ -297,23 +296,19 @@ export default function HeroSelectionScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-white relative">
-            {toastVisible && (
-                <CustomToast
-                    id="hero-redirect-toast"
-                    title="Action Required"
-                    description={toastMessage}
-                    status="info"
-                />
-            )}
             <View className="flex-1">
                 {/* Navigation Header */}
                 <View className="flex-row items-center justify-between px-6 pt-2 pb-2">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="w-10 h-10 rounded-full border border-slate-100 items-center justify-center bg-white shadow-sm"
-                    >
-                        <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
-                    </TouchableOpacity>
+                    {navigation.canGoBack() && (navigation.getState()?.index ?? 0) > 0 ? (
+                        <TouchableOpacity
+                            onPress={() => router.back()}
+                            className="w-10 h-10 rounded-full border border-slate-100 items-center justify-center bg-white shadow-sm"
+                        >
+                            <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
+                        </TouchableOpacity>
+                    ) : (
+                        <View className="w-10" />
+                    )}
                     <View className="flex-col items-end gap-1 flex-1 px-4">
                         <View className="flex-row items-center gap-2">
                             <MaterialCommunityIcons name="seed" size={16} color="#22c55e" />

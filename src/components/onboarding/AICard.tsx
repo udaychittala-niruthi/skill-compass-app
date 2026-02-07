@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
-import { PredictedItem } from '../types/onboarding';
+import { useTheme } from '../../context/ThemeContext';
+import { PredictedItem } from '../../types/onboarding';
 
 interface AICardProps {
     item: PredictedItem;

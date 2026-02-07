@@ -5,15 +5,13 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import '../../../global.css';
-import { AICard } from '../../../src/components/AICard';
-import { CustomToast } from '../../../src/components/CustomToast';
+import { AICard } from '../../../src/components/onboarding/AICard';
 import PredictionLoader from '../../../src/components/PredictionLoader';
 import { PrimaryButton } from '../../../src/components/PrimaryButton';
 import { useTheme } from '../../../src/context/ThemeContext';
+import { useToast } from '../../../src/context/ToastContext';
 import { AppDispatch, RootState } from '../../../src/store';
 import { predictBranch } from '../../../src/store/slices/commonSlice';
-import { onboardProfessional, onboardStudent, onboardTeen } from '../../../src/store/slices/onboardingSlice';
 
 export default function BranchAIScreen() {
     const router = useRouter();
@@ -26,8 +24,7 @@ export default function BranchAIScreen() {
 
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
     const [isPredicting, setIsPredicting] = useState(true);
-    const [toastVisible, setToastVisible] = useState(false);
-    const [toastMessage, setToastMessage] = useState('');
+    const { showToast } = useToast();
 
     const courseId = params.courseId ? Number(params.courseId) : 0;
     const courseIcon = (params.courseIcon as string) || 'school';
@@ -56,57 +53,44 @@ export default function BranchAIScreen() {
         } catch (err: any) {
             console.error('Prediction failed:', err);
             const errorMessage = typeof err === 'string' ? err : err?.message || 'AI prediction failed. Please try manual selection.';
-            setToastMessage(errorMessage);
-            setToastVisible(true);
-            // Redirect after showing toast for 2 seconds
-            setTimeout(() => {
-                router.replace({ pathname: '/(onboarding)/branch/manual', params } as any);
-            }, 2000);
+            showToast(errorMessage, { status: 'error', title: 'Error' });
+            setTimeout(() => router.replace({ pathname: '/(onboarding)/branch/manual', params } as any), 2000);
         } finally {
             setIsPredicting(false);
         }
     };
 
-    const handleFinalize = async () => {
-        try {
-            if (user?.group === 'TEENS') {
-                await dispatch(onboardTeen({ interestIds: selectedInterests, skillIds: selectedSkills, bio: '' })).unwrap();
-            } else if (user?.group === 'COLLEGE_STUDENTS') {
-                await dispatch(onboardStudent({ courseId, branchId: selectedBranchId!, skills: selectedSkills, bio: '' })).unwrap();
-            } else if (user?.group === 'PROFESSIONALS') {
-                await dispatch(onboardProfessional({ currentRole: '', industry: '', yearsOfExperience: 0, skills: selectedSkills, bio: '' })).unwrap();
+    const handleFinalize = () => {
+        const isProfessional = user?.group === 'PROFESSIONALS';
+
+        // Professionals go to professional profile, others go to learning style
+        router.push({
+            pathname: isProfessional ? '/(onboarding)/profile/' : '/(onboarding)/profile/learning-style',
+            params: {
+                courseId: courseId.toString(),
+                branchId: selectedBranchId!.toString(),
+                courseIcon,
+                courseIconLib,
             }
-            router.replace('/(tabs)' as any);
-        } catch (err: any) {
-            console.error('Finalization failed:', err);
-            const errorMessage = typeof err === 'string' ? err : err?.message || 'Failed to finalize. Please try again.';
-            setToastMessage(errorMessage);
-            setToastVisible(true);
-        }
+        } as any);
     };
 
     if (isPredicting) return <PredictionLoader />;
 
     return (
         <SafeAreaView className="flex-1 bg-slate-50">
-            {/* Error Toast */}
-            {toastVisible && (
-                <CustomToast
-                    id="branch-ai-error-toast"
-                    title="Error"
-                    description={toastMessage}
-                    status="error"
-                />
-            )}
-
             {/* Header */}
             <View className="flex-row items-center justify-between px-6 py-4">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="w-10 h-10 rounded-full bg-white shadow-sm items-center justify-center"
-                >
-                    <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
-                </TouchableOpacity>
+                {router.canGoBack() ? (
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="w-10 h-10 rounded-full bg-white shadow-sm items-center justify-center"
+                    >
+                        <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
+                    </TouchableOpacity>
+                ) : (
+                    <View className="w-10" />
+                )}
 
                 <View className="flex-row gap-1.5">
                     <View className="h-1.5 w-6 rounded-full" style={{ backgroundColor: colors['--primary'] }} />

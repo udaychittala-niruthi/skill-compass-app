@@ -6,10 +6,13 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import "../global.css";
 import CustomSplashScreen from '../src/components/CustomSplashScreen';
 import { ThemeProvider as AppThemeProvider } from '../src/context/ThemeContext';
+import { ToastProvider } from '../src/context/ToastContext';
 import { store } from '../src/store';
 
 SplashScreen.preventAutoHideAsync();
@@ -29,7 +32,6 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) {
       // Hide native splash screen once fonts are loaded
-      // The CustomSplashScreen is already rendered and covering the screen
       SplashScreen.hideAsync();
     }
   }, [loaded]);
@@ -40,21 +42,27 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <ThemeProvider value={DefaultTheme}>
-        <AppThemeProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <Stack screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: '#fafaf9' },
-              animation: 'fade_from_bottom',
-            }} />
-            {!isSplashFinished && (
-              <CustomSplashScreen onFinish={() => setIsSplashFinished(true)} />
-            )}
-          </GestureHandlerRootView>
-          <StatusBar style="auto" />
-        </AppThemeProvider>
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <ThemeProvider value={DefaultTheme}>
+          <AppThemeProvider>
+            <ToastProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+                <Stack screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: '#fafaf9' },
+                animation: 'fade_from_bottom',
+              }} />
+              {!isSplashFinished && (
+                <CustomSplashScreen onFinish={() => setIsSplashFinished(true)} />
+              )}
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+            <StatusBar style="auto" />
+            </ToastProvider>
+          </AppThemeProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
     </Provider>
   );
 }

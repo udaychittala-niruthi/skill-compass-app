@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import React from 'react';
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
@@ -13,10 +13,10 @@ interface CustomToastProps {
     description?: string;
     variant?: 'solid' | 'outline' | 'accent';
     style?: ViewStyle;
-    className?: string;
+    onClose?: () => void;
 }
 
-export const CustomToast = ({ id, status = 'info', title, description, variant = 'solid', style }: CustomToastProps) => {
+export const CustomToast = ({ id, status = 'info', title, description, variant = 'solid', style, onClose }: CustomToastProps) => {
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
 
@@ -118,6 +118,18 @@ export const CustomToast = ({ id, status = 'info', title, description, variant =
                             </Text>
                         )}
                     </View>
+
+                    {/* Close button */}
+                    {onClose && (
+                        <TouchableOpacity
+                            onPress={onClose}
+                            className="ml-2 p-2 rounded-full"
+                            style={{ backgroundColor: 'rgba(0, 0, 0, 0.05)' }}
+                            activeOpacity={0.6}
+                        >
+                            <MaterialIcons name="close" size={20} color="#64748b" />
+                        </TouchableOpacity>
+                    )}
                 </BlurView>
             </Animated.View>
         </View>

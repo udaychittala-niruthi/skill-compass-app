@@ -47,7 +47,7 @@ export const updateAge = createAsyncThunk(
 
 export const onboardKid = createAsyncThunk(
     'onboarding/kid',
-    async (data: { avatar: string; bio: string }, { rejectWithValue }) => {
+    async (data: { learningStyle: string; weeklyLearningHours: number; avatar: string }, { rejectWithValue }) => {
         try {
             const response = await api.post('/onboarding/kids/profile', data);
             return response.data.body;
@@ -83,7 +83,7 @@ export const getSkillsAndInterests = createAsyncThunk(
 
 export const onboardTeen = createAsyncThunk(
     'onboarding/teen',
-    async (data: { interestIds: number[]; skillIds: number[]; bio: string }, { rejectWithValue }) => {
+    async (data: { learningStyle: string; weeklyLearningHours: number; interestIds: number[]; skillIds: number[]; courseId: number; branchId: number }, { rejectWithValue }) => {
         try {
             const response = await api.post('/onboarding/teens/interests', data);
             return response.data.body;
@@ -95,7 +95,7 @@ export const onboardTeen = createAsyncThunk(
 
 export const onboardStudent = createAsyncThunk(
     'onboarding/student',
-    async (data: { courseId: number; branchId: number; skills: number[]; bio: string }, { rejectWithValue }) => {
+    async (data: { courseId: number; branchId: number; learningStyle: string; weeklyLearningHours: number; skillIds: number[] }, { rejectWithValue }) => {
         try {
             const response = await api.post('/onboarding/students/details', data);
             return response.data.body;
@@ -107,7 +107,7 @@ export const onboardStudent = createAsyncThunk(
 
 export const onboardProfessional = createAsyncThunk(
     'onboarding/professional',
-    async (data: { currentRole: string; industry: string; yearsOfExperience: number; skills: number[]; bio: string }, { rejectWithValue }) => {
+    async (data: { courseId: number; branchId: number; learningStyle: string; weeklyLearningHours: number; currentRole: string; industry: string; yearsOfExperience: number; skillIds: number[]; targetRole: string }, { rejectWithValue }) => {
         try {
             const response = await api.post('/onboarding/professionals/details', data);
             return response.data.body;
@@ -119,7 +119,7 @@ export const onboardProfessional = createAsyncThunk(
 
 export const onboardSenior = createAsyncThunk(
     'onboarding/senior',
-    async (data: { interestIds: number[]; bio: string; accessibilitySettings: any }, { rejectWithValue }) => {
+    async (data: { learningStyle: string; weeklyLearningHours: number; courseId: number; branchId: number; interestIds: number[]; skillIds: number[]; accessibilitySettings: any }, { rejectWithValue }) => {
         try {
             const response = await api.post('/onboarding/seniors/details', data);
             return response.data.body;

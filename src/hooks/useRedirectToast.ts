@@ -1,23 +1,18 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useToast } from '../context/ToastContext';
 
+/**
+ * Shows a toast when the screen is opened with toastMessage in route params.
+ * Uses the global toast - no need to render CustomToast in the screen.
+ */
 export const useRedirectToast = () => {
     const params = useLocalSearchParams();
-    const [visible, setVisible] = useState(false);
-    const [message, setMessage] = useState('');
+    const { showToast } = useToast();
 
     useEffect(() => {
         if (params.toastMessage) {
-            setMessage(params.toastMessage as string);
-            setVisible(true);
-            const timer = setTimeout(() => setVisible(false), 4000);
-            return () => clearTimeout(timer);
+            showToast(params.toastMessage as string, { status: 'info', title: 'Action Required', duration: 4000 });
         }
-    }, [params.toastMessage]);
-
-    return {
-        visible,
-        message,
-        setVisible
-    };
+    }, [params.toastMessage, showToast]);
 };

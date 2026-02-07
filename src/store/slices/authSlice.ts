@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import api, { removeAuthToken, setAuthToken } from '../../services/api';
 import { LoginResponse, OnboardingStatus, User, UserPreferences } from '../../types/auth'; // Import UserPreferences
-import { updateSkillsAndInterests } from './onboardingSlice';
+import { updateAge, updateSkillsAndInterests } from './onboardingSlice';
 
 interface AuthState {
     user: User | null;
@@ -179,6 +179,22 @@ const authSlice = createSlice({
         builder.addCase(updateSkillsAndInterests.fulfilled, (state, action: PayloadAction<UserPreferences>) => {
             if (state.user) {
                 state.user.preferences = action.payload;
+            }
+        });
+
+        // Update user age and group when age is set (used by interests, skills, course, etc.)
+        builder.addCase(updateAge.fulfilled, (state, action: PayloadAction<{ age?: number; group?: string; user?: User }>) => {
+            if (!state.user || !action.payload) return;
+            const payload = action.payload;
+            // Handle both { age, group } and { user: {...} } response shapes
+            if (payload.user) {
+                state.user = { ...state.user, ...payload.user };
+            } else if (payload.age != null || payload.group != null) {
+                state.user = {
+                    ...state.user,
+                    ...(payload.age != null && { age: payload.age }),
+                    ...(payload.group != null && { group: payload.group }),
+                };
             }
         });
     },

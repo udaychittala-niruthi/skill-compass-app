@@ -1,44 +1,93 @@
+import { useTheme } from '@/src/context/ThemeContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { Link, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Link, useNavigation, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import Animated, { interpolate, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import '../../global.css';
-import { CustomToast } from '../../src/components/CustomToast';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
+import { KeyboardAwareScrollView } from '../../src/components/KeyboardAwareScrollView';
 import { PrimaryInput } from '../../src/components/PrimaryInput';
 import { useOnboardingRedirect } from '../../src/hooks/useOnboardingRedirect';
+import { useToast } from '../../src/context/ToastContext';
 import { AppDispatch, RootState } from '../../src/store';
 import { checkOnboardingStatus, clearError, loginUser } from '../../src/store/slices/authSlice';
 import { OnboardingStatus } from '../../src/types/auth';
 
 export default function LoginScreen() {
     const router = useRouter();
+    const { colors } = useTheme();
+    const navigation = useNavigation();
     const dispatch = useDispatch<AppDispatch>();
     const { loading, error, isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+
+    const pulseValue = useSharedValue(0);
+    const rotation = useSharedValue(0);
+
+    useEffect(() => {
+        pulseValue.value = withRepeat(
+            withTiming(1, { duration: 4000 }),
+            -1,
+            false
+        );
+        rotation.value = withRepeat(
+            withTiming(360, { duration: 20000 }),
+            -1,
+            false
+        );
+    }, []);
+
+    const rotationStyle = useAnimatedStyle(() => ({
+        transform: [{ rotate: `${rotation.value}deg` }]
+    }));
+
+    const ring1Style = useAnimatedStyle(() => ({
+        transform: [
+            { translateX: -80 },
+            { translateY: -80 },
+            { scale: interpolate(pulseValue.value, [0, 1], [1, 1.5]) }
+        ],
+        opacity: interpolate(pulseValue.value, [0, 0.5, 1], [0, 0.3, 0])
+    }));
+
+    const ring2Style = useAnimatedStyle(() => {
+        const progress = (pulseValue.value + 0.33) % 1;
+        return {
+            transform: [
+                { translateX: -80 },
+                { translateY: -80 },
+                { scale: interpolate(progress, [0, 1], [1, 1.5]) }
+            ],
+            opacity: interpolate(progress, [0, 0.5, 1], [0, 0.2, 0])
+        };
+    });
+
+    const ring3Style = useAnimatedStyle(() => {
+        const progress = (pulseValue.value + 0.66) % 1;
+        return {
+            transform: [
+                { translateX: -80 },
+                { translateY: -80 },
+                { scale: interpolate(progress, [0, 1], [1, 1.5]) }
+            ],
+            opacity: interpolate(progress, [0, 0.5, 1], [0, 0.1, 0])
+        };
+    });
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
     // Toast State
-    const [toastVisible, setToastVisible] = useState(false);
-    const [toastMessage, setToastMessage] = useState('');
-    const [toastStatus, setToastStatus] = useState<'success' | 'error' | 'info' | 'warning'>('info');
-
-    const showToast = (message: string, status: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-        setToastMessage(message);
-        setToastStatus(status);
-        setToastVisible(true);
-        setTimeout(() => setToastVisible(false), 3000);
-    };
-
+    const { showToast } = useToast();
+    const hasHandledRedirect = useRef(false);
     const { performRedirect } = useOnboardingRedirect();
 
     useEffect(() => {
-        if (isAuthenticated && user) {
+        if (isAuthenticated && user && !hasHandledRedirect.current) {
+            hasHandledRedirect.current = true;
             dispatch(checkOnboardingStatus())
                 .unwrap()
                 .then((status: OnboardingStatus) => {
@@ -56,18 +105,18 @@ export default function LoginScreen() {
                     } else {
                         // For other errors, we might want to show a toast or stay on login
                         console.error('❌ [LOGIN] Profile check failed:', err);
-                        showToast(errorMessage, 'error');
+                        showToast(errorMessage, { status: 'error' });
                     }
                 });
         }
-    }, [isAuthenticated, user, dispatch]);
+    }, [isAuthenticated, user, dispatch, showToast]);
 
     useEffect(() => {
         if (error) {
-            showToast(error, 'error');
+            showToast(error, { status: 'error' });
             dispatch(clearError());
         }
-    }, [error, dispatch]);
+    }, [error, dispatch, showToast]);
 
     const validate = () => {
         let valid = true;
@@ -98,32 +147,25 @@ export default function LoginScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-background-neutral relative">
-            {/* Toast Container */}
-            {toastVisible && (
-                <CustomToast
-                    id="login-toast"
-                    title={toastStatus === 'error' ? 'Error' : 'Notification'}
-                    description={toastMessage}
-                    status={toastStatus}
-                />
-            )}
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            <KeyboardAwareScrollView
                 className="flex-1"
+                contentContainerStyle={{ flexGrow: 1 }}
             >
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
                     <View className="flex-1 px-8 pt-4 pb-8">
                         {/* Header */}
                         <View className="flex-row items-center justify-between mb-8">
-                            <TouchableOpacity
-                                onPress={() => router.back()}
-                                className="w-12 h-12 rounded-full bg-white items-center justify-center shadow-sm border border-slate-100 active:scale-95"
-                            >
-                                <MaterialIcons name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} />
-                            </TouchableOpacity>
+                            {navigation.canGoBack() && (navigation.getState()?.index ?? 0) > 0 ? (
+                                <TouchableOpacity
+                                    onPress={() => router.back()}
+                                    className="w-12 h-12 rounded-full bg-white items-center justify-center shadow-sm border border-slate-100 active:scale-95"
+                                >
+                                    <MaterialIcons name="arrow-back-ios" size={20} color="#475569" style={{ marginLeft: 6 }} />
+                                </TouchableOpacity>
+                            ) : (
+                                <View className="w-12" />
+                            )}
                             <View className="flex-row gap-1.5">
-                                <View className="h-1.5 w-6 rounded-full bg-primary" />
+                                <View className="h-1.5 w-6 rounded-full" style={{ backgroundColor: colors["--primary"] }} />
                                 <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                                 <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                             </View>
@@ -132,16 +174,49 @@ export default function LoginScreen() {
 
                         {/* Illustration/Compass */}
                         <View className="items-center justify-center mb-10 mt-8 relative">
-                            {/* Light Well Background */}
-                            <View className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-blue-500/10" />
+                            {/* Animated Pulse Rings */}
+                            <Animated.View
+                                style={[{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    width: 160,
+                                    height: 160,
+                                    borderRadius: 80,
+                                    backgroundColor: colors["--primary"] + '20',
+                                }, ring1Style]}
+                            />
+                            <Animated.View
+                                style={[{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    width: 160,
+                                    height: 160,
+                                    borderRadius: 80,
+                                    backgroundColor: colors["--primary"] + '15',
+                                }, ring2Style]}
+                            />
+                            <Animated.View
+                                style={[{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    width: 160,
+                                    height: 160,
+                                    borderRadius: 80,
+                                    backgroundColor: colors["--primary"] + '10',
+                                }, ring3Style]}
+                            />
 
                             {/* Glass Card Container */}
                             <BlurView
                                 intensity={20}
                                 tint="light"
-                                className="w-40 h-40 rounded-full items-center justify-center overflow-hidden border border-white/50 bg-white/40"
+                                className="w-40 h-40 rounded-full items-center justify-center overflow-hidden border border-white/50"
+                                style={{ backgroundColor: colors["--primary"] + '10' }}
                             >
-                                <View className="items-center justify-center relative w-full h-full">
+                                <Animated.View style={[{ alignItems: 'center', justifyContent: 'center', position: 'relative', width: '100%', height: '100%' }, rotationStyle]}>
                                     {/* Layer 1: Glow / Back */}
                                     <View className="absolute items-center justify-center opacity-20 scale-110">
                                         <MaterialIcons name="explore" size={96} color="#2563eb" />
@@ -151,17 +226,12 @@ export default function LoginScreen() {
                                     <View className="absolute items-center justify-center">
                                         <MaterialIcons name="explore" size={90} color="rgba(59, 130, 246, 0.8)" />
                                     </View>
-
-                                    {/* Layer 3: Highlight / Overlay */}
-                                    <View className="absolute items-center justify-center translate-x-0.5 translate-y-0.5">
-                                        <MaterialIcons name="explore" size={90} color="rgba(96, 165, 250, 0.4)" />
-                                    </View>
-                                </View>
+                                </Animated.View>
                             </BlurView>
                         </View>
 
                         {/* Content */}
-                        <View className="items-center mb-10">
+                        <View className="items-center m-10">
                             <Text className="text-3xl font-extrabold text-slate-900 mb-3 text-center">
                                 Welcome Back
                             </Text>
@@ -221,8 +291,7 @@ export default function LoginScreen() {
                             </View>
                         </View>
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+                </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }

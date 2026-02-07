@@ -1,65 +1,73 @@
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { MotiView } from 'moti';
+import { useEffect, useRef, useState } from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import '../../global.css';
-import { CustomToast } from '../../src/components/CustomToast';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
+import { KeyboardAwareScrollView } from '../../src/components/KeyboardAwareScrollView';
 import { PrimaryInput } from '../../src/components/PrimaryInput';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useToast } from '../../src/context/ToastContext';
+import { useOnboardingRedirect } from '../../src/hooks/useOnboardingRedirect';
 import { AppDispatch, RootState } from '../../src/store';
-import { clearError, registerUser } from '../../src/store/slices/authSlice';
+import { checkOnboardingStatus, clearError, registerUser } from '../../src/store/slices/authSlice';
+import { OnboardingStatus } from '../../src/types/auth';
 
 export default function RegisterScreen() {
     const router = useRouter();
     const dispatch = useDispatch<AppDispatch>();
-    const { loading, error, isAuthenticated } = useSelector((state: RootState) => state.auth);
+    const { loading, error, isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+    const { performRedirect } = useOnboardingRedirect();
     const { colors } = useTheme(); // Use theme hook
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; confirmPassword?: string }>({});
+    const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string }>({});
 
     // Toast State
-    const [toastVisible, setToastVisible] = useState(false);
-    const [toastMessage, setToastMessage] = useState('');
-    const [toastStatus, setToastStatus] = useState<'success' | 'error' | 'info' | 'warning'>('info');
+    const { showToast } = useToast();
+    const hasHandledRedirect = useRef(false);
 
-    const showToast = (message: string, status: 'success' | 'error' | 'info' | 'warning' = 'info') => {
-        setToastMessage(message);
-        setToastStatus(status);
-        setToastVisible(true);
-        setTimeout(() => setToastVisible(false), 3000);
-    };
-
-    // Show success toast on successful registration
+    // Show success toast and redirect to onboarding (age first for new users)
     useEffect(() => {
-        if (isAuthenticated) {
-            showToast('Account created successfully!', 'success');
-            // Don't navigate here - the app will reload and the splash screen
-            // will handle routing based on the token and onboarding status
-            setTimeout(() => {
-                // Force app to restart at root to trigger splash screen
-                router.replace('/');
-            }, 500);
+        if (isAuthenticated && user && !hasHandledRedirect.current) {
+            hasHandledRedirect.current = true;
+            showToast('Account created successfully!', { status: 'success' });
+            dispatch(checkOnboardingStatus())
+                .unwrap()
+                .then((status: OnboardingStatus) => {
+                    setTimeout(() => performRedirect(status), 500);
+                })
+                .catch((err: any) => {
+                    const errorMessage = typeof err === 'string' ? err : err?.message || '';
+                    if (errorMessage.includes('Age is required')) {
+                        setTimeout(() => {
+                            router.replace({
+                                pathname: '/(onboarding)/age' as any,
+                                params: { toastMessage: 'Please set your age to continue' }
+                            });
+                        }, 500);
+                    } else {
+                        showToast(errorMessage, { status: 'error' });
+                    }
+                });
         }
-    }, [isAuthenticated, router]);
+    }, [isAuthenticated, user, dispatch, performRedirect, router, showToast]);
 
     useEffect(() => {
         if (error) {
-            showToast(error, 'error');
+            showToast(error, { status: 'error' });
             dispatch(clearError());
         }
-    }, [error, dispatch]);
+    }, [error, dispatch, showToast]);
 
     const validate = () => {
         let valid = true;
-        let newErrors: { name?: string; email?: string; password?: string; confirmPassword?: string } = {};
+        let newErrors: { name?: string; email?: string; password?: string } = {};
 
         if (!name) {
             newErrors.name = 'Name is required';
@@ -82,10 +90,7 @@ export default function RegisterScreen() {
             valid = false;
         }
 
-        if (confirmPassword !== password) {
-            newErrors.confirmPassword = 'Passwords do not match';
-            valid = false;
-        }
+
 
         setErrors(newErrors);
         return valid;
@@ -99,22 +104,11 @@ export default function RegisterScreen() {
 
     return (
         <SafeAreaView className="flex-1 bg-background-neutral relative">
-            {/* Toast Container */}
-            {toastVisible && (
-                <CustomToast
-                    id="register-toast"
-                    title={toastStatus === 'error' ? 'Error' : 'Notification'}
-                    description={toastMessage}
-                    status={toastStatus}
-                />
-            )}
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            <KeyboardAwareScrollView
                 className="flex-1"
+                contentContainerStyle={{ flexGrow: 1 }}
             >
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-                    <View className="flex-1 px-8 pt-4 pb-8">
+                    <View className="flex-1 px-8 pt-4 pb-4">
                         {/* Header */}
                         <View className="flex-row items-center justify-between mb-2">
                             <TouchableOpacity
@@ -132,8 +126,61 @@ export default function RegisterScreen() {
                         </View>
 
                         {/* Illustration/Shield */}
-                        <View className="items-center justify-center mb-8 mt-2 relative">
-                            {/* Light well effects */}
+                        <View className="items-center justify-center relative w-48 h-48 self-center">
+                            {/* Animated Sub-icons */}
+                            <MotiView
+                                from={{ translateX: -5, translateY: -5, rotate: '0deg' }}
+                                animate={{ translateX: 5, translateY: 5, rotate: '15deg' }}
+                                transition={{
+                                    type: 'timing',
+                                    duration: 2500,
+                                    loop: true,
+                                    repeatReverse: true,
+                                }}
+                                style={{ position: 'absolute', top: 10, left: -4, zIndex: 1 }}
+                            >
+                                <MaterialCommunityIcons
+                                    name="shield-check-outline"
+                                    size={24}
+                                    color={colors['--primary'] + '70'}
+                                />
+                            </MotiView>
+
+                            <MotiView
+                                from={{ translateX: 5, translateY: 5, scale: 0.9 }}
+                                animate={{ translateX: -5, translateY: -8, scale: 1.1, rotate: '15deg' }}
+                                transition={{
+                                    type: 'timing',
+                                    duration: 1000,
+                                    loop: true,
+                                    repeatReverse: true,
+                                }}
+                                style={{ position: 'absolute', bottom: 40, right: -2, zIndex: 1 }}
+                            >
+                                <MaterialCommunityIcons
+                                    name="lock-check-outline"
+                                    size={20}
+                                    color={colors['--primary'] + '50'}
+                                />
+                            </MotiView>
+
+                            <MotiView
+                                from={{ translateX: 0, translateY: 0, opacity: 0.4 }}
+                                animate={{ translateX: 10, translateY: -15, opacity: 0.8 }}
+                                transition={{
+                                    type: 'timing',
+                                    duration: 2200,
+                                    loop: true,
+                                    repeatReverse: true,
+                                }}
+                                style={{ position: 'absolute', top: 40, right: 10, zIndex: 1 }}
+                            >
+                                <MaterialIcons
+                                    name="security"
+                                    size={18}
+                                    color={colors['--primary'] + '60'}
+                                />
+                            </MotiView>
 
                             <LinearGradient
                                 colors={['#60a5fa', '#2563eb']} // Shield gradient can remain hardcoded or mapped to primary-light/primary
@@ -143,7 +190,7 @@ export default function RegisterScreen() {
                                 style={{ transform: [{ rotate: '12deg' }], borderRadius: 24 }}
                             >
                                 <View className="p-4 border rounded-2xl border-white/30 bg-white/20">
-                                    <MaterialIcons name="verified-user" size={48} color="white" />
+                                    <MaterialIcons name="person-add" size={48} color="white" />
                                 </View>
                             </LinearGradient>
                         </View>
@@ -188,24 +235,14 @@ export default function RegisterScreen() {
                                 <PrimaryInput
                                     placeholder="••••••••"
                                     value={password}
-                                    onChangeText={(text) => { setPassword(text); setErrors({ ...errors, password: '', confirmPassword: '' }); }}
+                                    onChangeText={(text) => { setPassword(text); setErrors({ ...errors, password: '' }); }}
                                     isPassword
                                     iconName="lock-outline"
                                     errorMessage={errors.password}
                                 />
                             </View>
 
-                            <View>
-                                <Text className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Confirm Password</Text>
-                                <PrimaryInput
-                                    placeholder="••••••••"
-                                    value={confirmPassword}
-                                    onChangeText={(text) => { setConfirmPassword(text); setErrors({ ...errors, confirmPassword: '' }); }}
-                                    isPassword
-                                    iconName="lock-outline"
-                                    errorMessage={errors.confirmPassword}
-                                />
-                            </View>
+
 
                             <Text className="text-xs text-center text-slate-400 mt-2 px-4 leading-5">
                                 By continuing, you agree to our <Text className="text-primary font-bold">Terms of Service</Text> and <Text className="text-primary font-bold">Privacy Policy</Text>.
@@ -232,8 +269,7 @@ export default function RegisterScreen() {
                             </View>
                         </View>
                     </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
+                </KeyboardAwareScrollView>
         </SafeAreaView>
     );
 }

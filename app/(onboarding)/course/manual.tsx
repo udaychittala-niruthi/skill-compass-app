@@ -2,19 +2,22 @@ import { FontAwesome, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@e
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
-import '../../../global.css';
 import { PrimaryButton } from '../../../src/components/PrimaryButton';
+import { KeyboardAwareScrollView } from '../../../src/components/KeyboardAwareScrollView';
 import { PrimaryInput } from '../../../src/components/PrimaryInput';
 import { useTheme } from '../../../src/context/ThemeContext';
+import { useRedirectToast } from '../../../src/hooks/useRedirectToast';
 import { RootState } from '../../../src/store';
 
 export default function CourseManualScreen() {
     const router = useRouter();
     const { colors } = useTheme();
     const { courses } = useSelector((state: RootState) => state.common);
+
+    useRedirectToast();
 
     const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -69,24 +72,28 @@ export default function CourseManualScreen() {
         <SafeAreaView className="flex-1 bg-slate-50">
             {/* Header */}
             <View className="flex-row items-center justify-between px-6 py-4">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="w-10 h-10 rounded-full bg-white shadow-sm items-center justify-center"
-                >
-                    <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
-                </TouchableOpacity>
+                {router.canGoBack() ? (
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="w-10 h-10 rounded-full bg-white shadow-sm items-center justify-center"
+                    >
+                        <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
+                    </TouchableOpacity>
+                ) : (
+                    <View className="w-10" />
+                )}
 
                 <View className="flex-row gap-1.5">
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
-                    <View className="h-1.5 w-6 rounded-full bg-blue-600" />
+                    <View className="h-1.5 w-6 rounded-full " style={{ backgroundColor: colors["--primary"] }} />
                 </View>
 
                 <View className="w-10" />
             </View>
 
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+            <KeyboardAwareScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 20 }}>
                 <View className="px-8 mt-4">
                     <Text className="text-3xl font-bold text-slate-900 mb-2 leading-tight">Browse Courses</Text>
                     <Text className="text-slate-500 mb-8 text-base font-medium">Choose the path that fits you best.</Text>
@@ -103,7 +110,7 @@ export default function CourseManualScreen() {
                         />
                     </View>
 
-                    <View className="flex-row flex-wrap gap-4 justify-center pb-10">
+                    <View className="flex-row flex-wrap gap-4 justify-center pb-2">
                         {visibleCourses.map((course) => {
                             const isSelected = selectedCourseId === course.id;
                             return (
@@ -113,9 +120,9 @@ export default function CourseManualScreen() {
                                         setSelectedCourseId(isSelected ? null : course.id);
                                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                     }}
-                                    className={`flex-row items-center gap-3 px-6 py-4 rounded-full font-semibold transition-all ${isSelected
+                                    className={`flex-row items-center gap-2 px-5 py-3 rounded-full font-semibold transition-all ${isSelected
                                         ? 'shadow-lg'
-                                        : 'bg-white border-white shadow-sm'
+                                        : 'bg-white/40 backdrop-blur-md border border-white/60 shadow-sm'
                                         }`}
                                     style={isSelected ? { backgroundColor: colors['--primary'] } : {}}
                                     activeOpacity={0.7}
@@ -137,14 +144,14 @@ export default function CourseManualScreen() {
                     {hasMore && (
                         <TouchableOpacity
                             onPress={handleLoadMore}
-                            className="mb-10 mx-auto px-10 py-4 bg-white border border-white rounded-full shadow-sm active:scale-95"
+                            className="mx-auto px-8 py-3 bg-white/60 backdrop-blur-md border border-white/80 rounded-full shadow-sm"
                             activeOpacity={0.7}
                         >
                             <Text style={{ color: colors['--primary'] }} className="font-bold text-base">Load More ...</Text>
                         </TouchableOpacity>
                     )}
                 </View>
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             <View className="p-8">
                 {selectedCourseId && <PrimaryButton

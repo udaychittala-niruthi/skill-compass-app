@@ -1,14 +1,15 @@
 import { FontAwesome, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import '../../global.css';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
+import { KeyboardAwareScrollView } from '../../src/components/KeyboardAwareScrollView';
 import { PrimaryInput } from '../../src/components/PrimaryInput';
 import { useTheme } from '../../src/context/ThemeContext';
+import { useRedirectToast } from '../../src/hooks/useRedirectToast';
 import { AppDispatch, RootState } from '../../src/store';
 import { fetchSkills, toggleSkill } from '../../src/store/slices/commonSlice';
 import { updateSkillsAndInterests } from '../../src/store/slices/onboardingSlice';
@@ -31,6 +32,7 @@ const renderIcon = (iconLibrary: string, iconName: string, size: number, color: 
 
 export default function SkillsScreen() {
     const router = useRouter();
+    const navigation = useNavigation();
     const dispatch = useDispatch<AppDispatch>();
     const { colors } = useTheme();
     const { skills, selectedSkills, selectedInterests, loading, error } = useSelector(
@@ -40,6 +42,8 @@ export default function SkillsScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [displayCount, setDisplayCount] = useState(10);
     const [showError, setShowError] = useState(false);
+
+    useRedirectToast();
 
     useEffect(() => {
         dispatch(fetchSkills());
@@ -83,6 +87,8 @@ export default function SkillsScreen() {
     };
 
 
+    const { user } = useSelector((state: RootState) => state.auth);
+
     const handleContinue = async () => {
         if (selectedSkills.length === 0 && selectedInterests.length === 0) {
             setShowError(true);
@@ -96,7 +102,10 @@ export default function SkillsScreen() {
                 interestIds: selectedInterests
             })).unwrap();
 
-            router.replace('/(onboarding)/course/' as any);
+            const isDirectToLearningStyle = user?.group === 'TEENS' || user?.group === 'SENIORS' || user?.group === 'KIDS';
+            const nextPath = isDirectToLearningStyle ? '/(onboarding)/profile/learning-style' : '/(onboarding)/course/';
+
+            router.replace(nextPath as any);
 
         } catch (err) {
             console.error('Failed to update skills and interests:', err);
@@ -133,12 +142,16 @@ export default function SkillsScreen() {
     return (
         <SafeAreaView className="flex-1 bg-gradient-to-b from-slate-50 to-blue-50/30">
             <View className="flex-row items-center justify-between px-6 py-4">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="w-10 h-10 rounded-full bg-white shadow-sm items-center justify-center"
-                >
-                    <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
-                </TouchableOpacity>
+                {navigation.canGoBack() && (navigation.getState()?.index ?? 0) > 0 ? (
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="w-10 h-10 rounded-full bg-white shadow-sm items-center justify-center"
+                    >
+                        <MaterialIcons name="arrow-back-ios-new" size={20} color="#475569" />
+                    </TouchableOpacity>
+                ) : (
+                    <View className="w-10" />
+                )}
 
                 <View className="flex-row gap-1.5">
                     <View className="h-1.5 w-2 rounded-full bg-slate-200" />
@@ -151,9 +164,8 @@ export default function SkillsScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView
+            <KeyboardAwareScrollView
                 contentContainerStyle={{ paddingBottom: 32 }}
-                showsVerticalScrollIndicator={false}
                 className="flex-1"
             >
                 <View className="items-center px-6 pt-2">
@@ -239,7 +251,7 @@ export default function SkillsScreen() {
                         )}
                     </View>
                 </View>
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             <View className="px-8 pb-8 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent">
                 {showError && (

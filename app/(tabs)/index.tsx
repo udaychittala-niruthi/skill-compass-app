@@ -2,7 +2,6 @@ import { useRouter } from 'expo-router';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import '../../global.css';
 import { RootState } from '../../src/store';
 import { logout } from '../../src/store/slices/authSlice';
 

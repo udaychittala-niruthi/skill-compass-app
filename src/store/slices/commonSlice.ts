@@ -92,21 +92,17 @@ const commonSlice = createSlice({
     reducers: {
         toggleInterest: (state, action) => {
             const id = action.payload;
-            const index = state.selectedInterests.indexOf(id);
-            if (index > -1) {
-                state.selectedInterests.splice(index, 1);
-            } else {
-                state.selectedInterests.push(id);
-            }
+            const exists = state.selectedInterests.includes(id);
+            state.selectedInterests = exists
+                ? state.selectedInterests.filter((x) => x !== id)
+                : [...state.selectedInterests, id];
         },
         toggleSkill: (state, action) => {
             const id = action.payload;
-            const index = state.selectedSkills.indexOf(id);
-            if (index > -1) {
-                state.selectedSkills.splice(index, 1);
-            } else {
-                state.selectedSkills.push(id);
-            }
+            const exists = state.selectedSkills.includes(id);
+            state.selectedSkills = exists
+                ? state.selectedSkills.filter((x) => x !== id)
+                : [...state.selectedSkills, id];
         },
     },
     extraReducers: (builder) => {
