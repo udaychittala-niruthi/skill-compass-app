@@ -4,11 +4,16 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import 'react-native-reanimated';
+import { configureReanimatedLogger, ReanimatedLogLevel } from 'react-native-reanimated';
+
+configureReanimatedLogger({ level: ReanimatedLogLevel.warn, strict: false });
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ApolloProvider } from '@apollo/client/react';
 import { Provider } from 'react-redux';
+import { apolloClient } from '../src/services/graphqlClient';
 import "../global.css";
 import CustomSplashScreen from '../src/components/CustomSplashScreen';
 import { ThemeProvider as AppThemeProvider } from '../src/context/ThemeContext';
@@ -16,6 +21,12 @@ import { ToastProvider } from '../src/context/ToastContext';
 import { store } from '../src/store';
 
 SplashScreen.preventAutoHideAsync();
+
+// Suppress deprecation warnings from dependencies (e.g. SafeAreaView from react-native core)
+LogBox.ignoreLogs([
+    'SafeAreaView has been deprecated',
+    'statusBarTranslucent and navigationBarTranslucent',
+]);
 
 export default function RootLayout() {
 
@@ -42,12 +53,13 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
+      <ApolloProvider client={apolloClient}>
       <SafeAreaProvider>
         <ThemeProvider value={DefaultTheme}>
           <AppThemeProvider>
             <ToastProvider>
             <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+              <KeyboardProvider>
                 <Stack screenOptions={{
                 headerShown: false,
                 contentStyle: { backgroundColor: '#fafaf9' },
@@ -63,6 +75,7 @@ export default function RootLayout() {
           </AppThemeProvider>
         </ThemeProvider>
       </SafeAreaProvider>
+      </ApolloProvider>
     </Provider>
   );
 }

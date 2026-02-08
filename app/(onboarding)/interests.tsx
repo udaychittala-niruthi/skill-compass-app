@@ -1,4 +1,5 @@
-import { FontAwesome, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { SafeIcon } from '../../src/components/SafeIcon';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -14,21 +15,9 @@ import { AppDispatch, RootState } from '../../src/store';
 import { fetchInterests, toggleInterest } from '../../src/store/slices/commonSlice';
 import { updateSkillsAndInterests } from '../../src/store/slices/onboardingSlice';
 
-// Helper function to render icon based on library
-const renderIcon = (iconLibrary: string, iconName: string, size: number, color: string) => {
-    switch (iconLibrary) {
-        case 'MaterialCommunityIcons':
-            return <MaterialCommunityIcons name={iconName as any} size={size} color={color} />;
-        case 'MaterialIcons':
-            return <MaterialIcons name={iconName as any} size={size} color={color} />;
-        case 'Ionicons':
-            return <Ionicons name={iconName as any} size={size} color={color} />;
-        case 'FontAwesome':
-            return <FontAwesome name={iconName as any} size={size} color={color} />;
-        default:
-            return <MaterialCommunityIcons name="help-circle" size={size} color={color} />;
-    }
-};
+const renderIcon = (iconLibrary: string, iconName: string, size: number, color: string) => (
+    <SafeIcon library={iconLibrary} name={iconName} size={size} color={color} />
+);
 
 export default function InterestsScreen() {
     const router = useRouter();

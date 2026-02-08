@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { SafeIcon } from '../SafeIcon';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -22,13 +22,8 @@ export const AICard = ({ item, isSelected, onSelect, icon, iconLibrary, showIcon
         if (!showIcon) return null;
         const lib = (iconLibrary as any) || 'MaterialCommunityIcons';
         const name = (icon as any) || 'school';
-
         const iconColor = isSelected ? primaryColor : '#64748b';
-
-        if (lib === 'MaterialIcons') {
-            return <MaterialIcons name={name} size={26} color={iconColor} />;
-        }
-        return <MaterialCommunityIcons name={name} size={26} color={iconColor} />;
+        return <SafeIcon library={lib} name={name} size={26} color={iconColor} />;
     };
 
     return (
@@ -129,7 +124,8 @@ export const AICard = ({ item, isSelected, onSelect, icon, iconLibrary, showIcon
                                 backgroundColor: primaryColor,
                             }}
                         >
-                            <MaterialCommunityIcons
+                            <SafeIcon
+                                library="MaterialCommunityIcons"
                                 name="check"
                                 size={14}
                                 color="#ffffff"
