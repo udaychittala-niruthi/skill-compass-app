@@ -22,6 +22,7 @@ const initialState: LearningState = {
 };
 
 const extractErrorMessage = (err: any): string => {
+    console.log('Server Response:', err.response?.data);
     if (err.response) {
         const data = err.response.data;
         if (data && typeof data === 'object') {
@@ -82,10 +83,22 @@ export const updateScheduleStatus = createAsyncThunk('learning/updateSchedule', 
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
+export const fetchModules = createAsyncThunk('learning/fetchModules', async (_, { rejectWithValue }) => {
+    try {
+        const response = await api.get('/learning-path/modules');
+        return response.data.body.modules;
+    } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
+});
+
 const learningSlice = createSlice({
     name: 'learning',
     initialState,
-    reducers: {},
+    reducers: {
+        setLearningPath: (state, action) => {
+            state.learningPath = action.payload;
+            state.pathStatus = 'COMPLETED'; // Assuming this status
+        },
+    },
     extraReducers: (builder) => {
         const handlePending = (state: LearningState) => { state.loading = true; state.error = null; };
         const handleRejected = (state: LearningState, action: any) => { state.loading = false; state.error = action.payload as string; };
@@ -97,7 +110,19 @@ const learningSlice = createSlice({
 
         builder.addCase(fetchMyLearningPath.fulfilled, (state, action) => {
             state.loading = false;
-            state.learningPath = action.payload; // Adjust based on API
+            state.learningPath = action.payload;
+            state.pathStatus = action.payload?.status || null;
+        });
+
+        builder.addCase(regeneratePath.fulfilled, (state, action) => {
+            state.loading = false;
+            state.learningPath = action.payload;
+            state.pathStatus = action.payload?.status || null;
+        });
+
+        builder.addCase(fetchModules.fulfilled, (state, action) => {
+            state.loading = false;
+            state.currentModules = action.payload;
         });
 
         builder.addCase(fetchMyProgress.fulfilled, (state, action) => {
@@ -113,6 +138,7 @@ const learningSlice = createSlice({
         // Add pending/rejected handlers for all
         builder.addCase(fetchLearningPathStatus.pending, handlePending).addCase(fetchLearningPathStatus.rejected, handleRejected);
         builder.addCase(fetchMyLearningPath.pending, handlePending).addCase(fetchMyLearningPath.rejected, handleRejected);
+        builder.addCase(fetchModules.pending, handlePending).addCase(fetchModules.rejected, handleRejected);
         builder.addCase(fetchMyProgress.pending, handlePending).addCase(fetchMyProgress.rejected, handleRejected);
         builder.addCase(fetchMySchedule.pending, handlePending).addCase(fetchMySchedule.rejected, handleRejected);
         builder.addCase(regeneratePath.pending, handlePending).addCase(regeneratePath.rejected, handleRejected);
@@ -121,4 +147,5 @@ const learningSlice = createSlice({
     },
 });
 
+export const { setLearningPath } = learningSlice.actions;
 export default learningSlice.reducer;

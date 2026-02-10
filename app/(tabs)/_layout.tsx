@@ -1,29 +1,26 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { Stack } from 'expo-router';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../../src/store';
+import { fetchModules } from '../../src/store/slices/learningSlice';
 
 export default function TabLayout() {
-    const colorScheme = useColorScheme();
+    const dispatch = useDispatch<AppDispatch>();
+    const { currentModules } = useSelector((state: RootState) => state.learning);
 
+    useEffect(() => {
+        if (!currentModules || currentModules.length === 0) {
+            dispatch(fetchModules());
+        }
+    }, [dispatch]);
+
+    // Bottom navigation hidden for now - will be added back later
     return (
-        <Tabs
-            screenOptions={{
-                headerShown: false,
-                tabBarStyle: {
-                    backgroundColor: colorScheme === 'dark' ? '#000' : '#fff',
-                },
-                tabBarActiveTintColor: '#2563eb',
-            }}
-        >
-            <Tabs.Screen
-                name="index"
-                options={{
-                    title: 'Home',
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="home-outline" size={size} color={color} />
-                    ),
-                }}
-            />
-        </Tabs>
+        <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="explore" />
+            <Stack.Screen name="achievements" />
+            <Stack.Screen name="settings" />
+        </Stack>
     );
 }

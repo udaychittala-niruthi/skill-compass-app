@@ -16,6 +16,7 @@ const initialState: ClipState = {
 };
 
 const extractErrorMessage = (err: any): string => {
+    console.log('Server Response:', err.response?.data);
     if (err.response) {
         const data = err.response.data;
         if (data && typeof data === 'object') {

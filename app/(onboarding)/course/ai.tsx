@@ -32,8 +32,15 @@ export default function CourseAIScreen() {
     const handleAIPredict = async () => {
         setIsPredicting(true);
 
-        const interestIds = selectedInterests.length > 0 ? selectedInterests : userInterests.map(i => i.id);
-        const skillIds = selectedSkills.length > 0 ? selectedSkills : userSkills.map(s => s.id);
+        const interestIds = (selectedInterests?.length ?? 0) > 0 ? selectedInterests : (userInterests || []).map(i => i.id);
+        const skillIds = (selectedSkills?.length ?? 0) > 0 ? selectedSkills : (userSkills || []).map(s => s.id);
+
+        if (skillIds.length === 0) {
+            setIsPredicting(false);
+            showToast('Skills are missing, please select skills first...', { status: 'info' });
+            setTimeout(() => router.replace('/(onboarding)/skills' as any), 2000);
+            return;
+        }
 
         if (interestIds.length === 0 && skillIds.length === 0) {
             setIsPredicting(false);

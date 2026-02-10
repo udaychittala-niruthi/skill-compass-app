@@ -4,22 +4,19 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { LearningStyle, LearningStyleForm, WeeklyCommitment } from '../../../src/components/onboarding/LearningStyleForm';
 import { useTheme } from '../../../src/context/ThemeContext';
 import { useToast } from '../../../src/context/ToastContext';
 import { useRedirectToast } from '../../../src/hooks/useRedirectToast';
-import { AppDispatch, RootState } from '../../../src/store';
-import { onboardKid, onboardProfessional, onboardSenior, onboardStudent, onboardTeen } from '../../../src/store/slices/onboardingSlice';
+import { RootState } from '../../../src/store';
 
 export default function LearningStyleScreen() {
     const router = useRouter();
     const navigation = useNavigation();
     const params = useLocalSearchParams();
-    const dispatch = useDispatch<AppDispatch>();
     const { colors } = useTheme();
     const { user } = useSelector((state: RootState) => state.auth);
-    const { selectedInterests, selectedSkills } = useSelector((state: RootState) => state.common);
     const { loading } = useSelector((state: RootState) => state.onboarding);
 
     const [selectedCommitment, setSelectedCommitment] = useState<WeeklyCommitment | null>(null);
@@ -49,59 +46,23 @@ export default function LearningStyleScreen() {
             const yearsOfExperience = params.yearsOfExperience ? Number(params.yearsOfExperience) : 0;
             const targetRole = params.targetRole as string || '';
 
-            if (user?.group === 'TEENS') {
-                await dispatch(onboardTeen({
+
+            router.push({
+                pathname: '/(onboarding)/processing',
+                params: {
                     learningStyle: selectedStyle,
-                    weeklyLearningHours,
-                    interestIds: selectedInterests,
-                    skillIds: selectedSkills,
-                    courseId,
-                    branchId,
-                })).unwrap();
-            } else if (user?.group === 'COLLEGE_STUDENTS') {
-                await dispatch(onboardStudent({
-                    courseId,
-                    branchId,
-                    learningStyle: selectedStyle,
-                    weeklyLearningHours,
-                    skillIds: selectedSkills,
-                })).unwrap();
-            } else if (user?.group === 'PROFESSIONALS') {
-                await dispatch(onboardProfessional({
-                    courseId,
-                    branchId,
-                    learningStyle: selectedStyle,
-                    weeklyLearningHours,
+                    weeklyLearningHours: weeklyLearningHours.toString(),
+                    courseId: courseId.toString(),
+                    branchId: branchId.toString(),
                     currentRole,
                     industry,
-                    yearsOfExperience,
-                    skillIds: selectedSkills,
+                    yearsOfExperience: yearsOfExperience.toString(),
                     targetRole
-                })).unwrap();
-            } else if (user?.group === 'SENIORS') {
-                await dispatch(onboardSenior({
-                    learningStyle: selectedStyle,
-                    weeklyLearningHours,
-                    courseId,
-                    branchId,
-                    interestIds: selectedInterests,
-                    skillIds: selectedSkills,
-                    accessibilitySettings: {
-                        fontSize: 'medium'
-                    },
-                })).unwrap();
-            } else if (user?.group === 'KIDS') {
-                await dispatch(onboardKid({
-                    learningStyle: selectedStyle,
-                    weeklyLearningHours,
-                    avatar: user?.hero || 'superhero_1.png',
-                })).unwrap();
-            }
-
-            router.replace('/(tabs)' as any);
+                }
+            } as any);
         } catch (err: any) {
-            console.error('Onboarding failed:', err);
-            showToast(err?.message || err || 'Failed to complete onboarding. Please try again.', { status: 'error', title: 'Error' });
+            console.error('Onboarding flow error:', err);
+            showToast('Failed to continue. Please try again.', { status: 'error', title: 'Error' });
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         }
     };

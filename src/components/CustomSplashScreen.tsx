@@ -14,7 +14,7 @@ import { useDispatch } from 'react-redux';
 import { useOnboardingRedirect } from '../hooks/useOnboardingRedirect';
 import { setAuthToken } from '../services/api';
 import { AppDispatch } from '../store';
-import { checkOnboardingStatus } from '../store/slices/authSlice';
+import { checkOnboardingStatus, setToken } from '../store/slices/authSlice';
 
 interface MyTokenPayload extends JwtPayload {
     id: number;
@@ -91,6 +91,7 @@ export default function CustomSplashScreen({ onFinish }: CustomSplashScreenProps
 
                 // Token seems valid, set it and fetch profile
                 await setAuthToken(token);
+                dispatch(setToken(token)); // This trigger the global SocketProvider
 
                 // Fetch fresh user status
                 const actionResult = await dispatch(checkOnboardingStatus());

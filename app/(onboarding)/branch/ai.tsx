@@ -37,8 +37,15 @@ export default function BranchAIScreen() {
     const handleAIPredict = async () => {
         setIsPredicting(true);
 
-        const interestIds = selectedInterests.length > 0 ? selectedInterests : userInterests.map(i => i.id);
-        const skillIds = selectedSkills.length > 0 ? selectedSkills : userSkills.map(s => s.id);
+        const interestIds = (selectedInterests?.length ?? 0) > 0 ? selectedInterests : (userInterests || []).map(i => i.id);
+        const skillIds = (selectedSkills?.length ?? 0) > 0 ? selectedSkills : (userSkills || []).map(s => s.id);
+
+        if (skillIds.length === 0) {
+            setIsPredicting(false);
+            showToast('AI prediction requires at least one skill. Switching to manual...', { status: 'info' });
+            setTimeout(() => router.replace({ pathname: '/(onboarding)/branch/manual', params } as any), 2000);
+            return;
+        }
 
         const predictPromise = dispatch(predictBranch({
             interestIds,

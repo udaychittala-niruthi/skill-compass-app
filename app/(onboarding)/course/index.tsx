@@ -5,6 +5,7 @@ import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '../../../src/context/ThemeContext';
+import { useToast } from '../../../src/context/ToastContext';
 import { useRedirectToast } from '../../../src/hooks/useRedirectToast';
 import { AppDispatch, RootState } from '../../../src/store';
 import { fetchCourses } from '../../../src/store/slices/commonSlice';
@@ -20,6 +21,7 @@ export default function CourseChoiceScreen() {
 
     const [isInitialLoading, setIsInitialLoading] = useState(true);
 
+    const { showToast } = useToast();
     useRedirectToast();
 
     const isMandatory = user?.group === 'COLLEGE_STUDENTS' || user?.group === 'PROFESSIONALS';
@@ -97,16 +99,16 @@ export default function CourseChoiceScreen() {
                         <Text className="text-slate-500 text-center mb-6 px-4">Choose how you'd like to discover your educational path.</Text>
 
                         {/* Profile Context Section */}
-                        {(userSkills.length > 0 || userInterests.length > 0) && (
+                        {((userSkills?.length ?? 0) > 0 || (userInterests?.length ?? 0) > 0) && (
                             <View className="w-full mb-10">
                                 <View className="flex-row flex-wrap gap-2 justify-center">
-                                    {userSkills.map(skill => (
+                                    {userSkills?.map(skill => (
                                         <View key={`skill-${skill.id}`} className="px-3 py-1.5 rounded-full border flex-row items-center gap-1.5" style={{ backgroundColor: `${colors['--primary']}10`, borderColor: `${colors['--primary']}20` }}>
                                             <MaterialCommunityIcons name="star" size={12} color={colors['--primary']} />
                                             <Text className="text-[10px] font-bold uppercase tracking-wider" style={{ color: colors['--primary'] }}>{skill.name}</Text>
                                         </View>
                                     ))}
-                                    {userInterests.map(interest => (
+                                    {userInterests?.map(interest => (
                                         <View key={`interest-${interest.id}`} className="px-3 py-1.5 rounded-full border flex-row items-center gap-1.5" style={{ backgroundColor: `${colors['--accent']}10`, borderColor: `${colors['--accent']}20` }}>
                                             <MaterialCommunityIcons name="lightbulb" size={12} color={colors['--accent']} />
                                             <Text className="text-[10px] font-bold uppercase tracking-wider" style={{ color: colors['--accent'] }}>{interest.name}</Text>
@@ -117,8 +119,14 @@ export default function CourseChoiceScreen() {
                         )}
 
                         <TouchableOpacity
-                            onPress={() => router.push('/(onboarding)/course/ai' as any)}
-                            style={{ backgroundColor: colors['--primary'] }}
+                            onPress={() => {
+                                if ((userSkills?.length ?? 0) === 0) {
+                                    showToast('AI prediction requires at least one skill. Please select skills first or browse manually.', { status: 'info', title: 'Action Required' });
+                                } else {
+                                    router.push('/(onboarding)/course/ai' as any);
+                                }
+                            }}
+                            style={{ backgroundColor: colors['--primary'], opacity: (userSkills?.length ?? 0) === 0 ? 0.7 : 1 }}
                             className="w-full p-6 rounded-3xl flex-row items-center justify-between mb-4 shadow-xl shadow-primary/20"
                         >
                             <View className="flex-row items-center gap-4">

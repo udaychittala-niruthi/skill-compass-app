@@ -33,9 +33,11 @@ const initialState: CommonState = {
 };
 
 const extractErrorMessage = (err: any): string => {
+    console.log('Server Response:', err.response?.data);
     if (err.response) {
         const data = err.response.data;
         if (data && typeof data === 'object') {
+            if (data.err && typeof data.err === 'string') return data.err;
             if (data.message) return data.message;
             if (data.error) return data.error;
         }

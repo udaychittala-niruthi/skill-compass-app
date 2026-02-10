@@ -56,7 +56,8 @@ export interface UserSkillsAndInterestsResponse {
     status: boolean;
     message: string;
     body: {
-        skils: SkillItem[]; // Backend typo: skils
+        skils?: SkillItem[]; // Backend typo: skils
+        skills?: SkillItem[];
         interests: InterestItem[];
     };
 }

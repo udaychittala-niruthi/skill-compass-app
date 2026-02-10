@@ -20,9 +20,11 @@ const initialState: OnboardingState = {
 
 // Helper to extract error message
 const extractErrorMessage = (err: any): string => {
+    console.log('Server Response:', err.response?.data);
     if (err.response) {
         const data = err.response.data;
         if (data && typeof data === 'object') {
+            if (data.err && typeof data.err === 'string') return data.err;
             if (data.message) return data.message;
             if (data.error) return data.error;
         }
@@ -83,7 +85,7 @@ export const getSkillsAndInterests = createAsyncThunk(
 
 export const onboardTeen = createAsyncThunk(
     'onboarding/teen',
-    async (data: { learningStyle: string; weeklyLearningHours: number; interestIds: number[]; skillIds: number[]; courseId: number; branchId: number }, { rejectWithValue }) => {
+    async (data: { learningStyle: string; weeklyLearningHours: number; courseId: number; branchId: number }, { rejectWithValue }) => {
         try {
             const response = await api.post('/onboarding/teens/interests', data);
             return response.data.body;
@@ -95,7 +97,7 @@ export const onboardTeen = createAsyncThunk(
 
 export const onboardStudent = createAsyncThunk(
     'onboarding/student',
-    async (data: { courseId: number; branchId: number; learningStyle: string; weeklyLearningHours: number; skillIds: number[] }, { rejectWithValue }) => {
+    async (data: { courseId: number; branchId: number; learningStyle: string; weeklyLearningHours: number }, { rejectWithValue }) => {
         try {
             const response = await api.post('/onboarding/students/details', data);
             return response.data.body;
@@ -107,7 +109,7 @@ export const onboardStudent = createAsyncThunk(
 
 export const onboardProfessional = createAsyncThunk(
     'onboarding/professional',
-    async (data: { courseId: number; branchId: number; learningStyle: string; weeklyLearningHours: number; currentRole: string; industry: string; yearsOfExperience: number; skillIds: number[]; targetRole: string }, { rejectWithValue }) => {
+    async (data: { courseId: number; branchId: number; learningStyle: string; weeklyLearningHours: number; currentRole: string; industry: string; yearsOfExperience: number; targetRole: string }, { rejectWithValue }) => {
         try {
             const response = await api.post('/onboarding/professionals/details', data);
             return response.data.body;
@@ -119,7 +121,7 @@ export const onboardProfessional = createAsyncThunk(
 
 export const onboardSenior = createAsyncThunk(
     'onboarding/senior',
-    async (data: { learningStyle: string; weeklyLearningHours: number; courseId: number; branchId: number; interestIds: number[]; skillIds: number[]; accessibilitySettings: any }, { rejectWithValue }) => {
+    async (data: { learningStyle: string; weeklyLearningHours: number; courseId: number; branchId: number; accessibilitySettings: any }, { rejectWithValue }) => {
         try {
             const response = await api.post('/onboarding/seniors/details', data);
             return response.data.body;
@@ -168,14 +170,23 @@ const onboardingSlice = createSlice({
             .addCase(onboardTeen.rejected, handleRejected)
 
             .addCase(updateSkillsAndInterests.pending, handlePending)
-            .addCase(updateSkillsAndInterests.fulfilled, handleFulfilled)
+            .addCase(updateSkillsAndInterests.fulfilled, (state, action) => {
+                state.loading = false;
+                state.success = true;
+                if (action.payload) {
+                    state.userSkills = action.payload.skils || action.payload.skills || [];
+                    state.userInterests = action.payload.interests || [];
+                }
+            })
             .addCase(updateSkillsAndInterests.rejected, handleRejected)
 
             .addCase(getSkillsAndInterests.pending, handlePending)
             .addCase(getSkillsAndInterests.fulfilled, (state, action) => {
                 state.loading = false;
-                state.userSkills = action.payload.skils;
-                state.userInterests = action.payload.interests;
+                if (action.payload) {
+                    state.userSkills = action.payload.skils || action.payload.skills || [];
+                    state.userInterests = action.payload.interests || [];
+                }
             })
             .addCase(getSkillsAndInterests.rejected, handleRejected)
 

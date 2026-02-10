@@ -26,6 +26,7 @@ const initialState: AuthState = {
 
 // Helper to extract error message
 const extractErrorMessage = (err: any): string => {
+    console.log('Server Response:', err.response?.data);
     if (err.response) {
         const data = err.response.data;
         if (data && typeof data === 'object') {
@@ -109,6 +110,10 @@ const authSlice = createSlice({
             state.isAuthenticated = false;
             state.error = null;
             removeAuthToken(); // Side effect: remove token from storage
+        },
+        setToken: (state, action: PayloadAction<string>) => {
+            state.token = action.payload;
+            state.isAuthenticated = true;
         },
         clearError: (state) => {
             state.error = null;
@@ -200,5 +205,5 @@ const authSlice = createSlice({
     },
 });
 
-export const { logout, clearError, updateUserProfile } = authSlice.actions;
+export const { logout, clearError, updateUserProfile, setToken } = authSlice.actions;
 export default authSlice.reducer;
