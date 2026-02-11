@@ -7,9 +7,11 @@ interface PrimaryButtonProps extends TouchableOpacityProps {
     title: string;
     iconName?: keyof typeof MaterialIcons.glyphMap;
     className?: string;
+    textStyle?: any;
+    textClassName?: string;
 }
 
-export const PrimaryButton = ({ title, iconName, className, ...props }: PrimaryButtonProps) => {
+export const PrimaryButton = ({ title, iconName, className, textStyle, textClassName, ...props }: PrimaryButtonProps) => {
     const { colors } = useTheme();
     return (
         <TouchableOpacity
@@ -23,7 +25,12 @@ export const PrimaryButton = ({ title, iconName, className, ...props }: PrimaryB
             className={`w-full py-4 h-18 rounded-[16px] items-center flex-row justify-center gap-3 shadow-xl shadow-primary active:scale-[0.98] transition-transform ${className || ''}`}
             {...props}
         >
-            <Text className="text-white font-bold text-xl">{title}</Text>
+            <Text
+                className={`text-white font-bold text-xl ${textClassName || ''}`}
+                style={textStyle}
+            >
+                {title}
+            </Text>
             {iconName && (
                 <MaterialIcons
                     name={iconName}

@@ -11,6 +11,7 @@ import { useTheme } from '../src/context/ThemeContext';
 import { AppDispatch, RootState } from '../src/store';
 import { logout } from '../src/store/slices/authSlice';
 
+
 export default function ProfileScreen() {
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -66,14 +67,14 @@ export default function ProfileScreen() {
                         <BlurView intensity={20} tint="light" style={StyleSheet.absoluteFill} />
                         <View className="p-6">
                             <View className="items-center mb-6">
-                                <View className="w-24 h-24 rounded-full bg-slate-100 items-center justify-center mb-4 border-4 border-white shadow-lg">
-                                    {user.hero ? (
+                                <View className="mb-4">
+                                    {user?.hero ? (
                                         <Image
                                             source={{ uri: user.hero.startsWith('http') ? user.hero : `https://avatar.iran.liara.run/public/boy?username=${user.name}` }}
-                                            className="w-full h-full rounded-full"
+                                            className="w-full h-full"
                                         />
                                     ) : (
-                                        <MaterialIcons name="person" size={48} color={colors['--primary']} />
+                                        <MaterialIcons name="person" size={32} color={colors['--muted-foreground']} />
                                     )}
                                 </View>
                                 <Text style={{ color: colors.text }} className="text-2xl font-black mb-1">

@@ -23,7 +23,7 @@ export const useOnboardingRedirect = () => {
 
         if (status.group === 'KIDS') {
             return {
-                path: '/(onboarding)/hero',
+                path: '/(tabs)/kid',
                 reason: 'Complete your profile to see tailored content',
             };
         }

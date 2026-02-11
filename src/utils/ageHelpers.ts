@@ -14,12 +14,12 @@ export interface AgeMeta {
 }
 
 const GROUPS: AgeMeta[] = [
-    { group: 'kid', groupIndex: 0, iconName: 'help-outline', color: '#94a3b8', label: 'SELECT' },
+    { group: 'kid', groupIndex: 0, iconName: 'help-circle-outline', color: '#94a3b8', label: 'SELECT' },
     { group: 'kid', groupIndex: 1, iconName: 'seed', color: '#22c55e', label: 'KID' },
     { group: 'teen', groupIndex: 2, iconName: 'sprout', color: '#f59e0b', label: 'TEEN' },
-    { group: 'student', groupIndex: 3, iconName: 'tree-outline', color: '#3b82f6', label: 'STUDENT' },
-    { group: 'professional', groupIndex: 4, iconName: 'tree', color: '#6366f1', label: 'PROFESSIONAL' },
-    { group: 'senior', groupIndex: 5, iconName: 'pine-tree', color: '#a855f7', label: 'SENIOR' },
+    { group: 'student', groupIndex: 3, iconName: 'school-outline', color: '#3b82f6', label: 'STUDENT' },
+    { group: 'professional', groupIndex: 4, iconName: 'briefcase-variant-outline', color: '#6366f1', label: 'PROFESSIONAL' },
+    { group: 'senior', groupIndex: 5, iconName: 'glasses', color: '#a855f7', label: 'SENIOR' },
 ];
 
 export const getAgeMeta = (age: number): AgeMeta => {

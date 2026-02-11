@@ -273,7 +273,7 @@ export default function HeroSelectionScreen() {
         const selectedHero = HEROES[selectedIndex].id;
         dispatch(updateUserProfile({ hero: selectedHero }));
         console.log('Use Hero:', selectedHero);
-        router.push('/(onboarding)/interests' as any);
+        router.replace('/(tabs)/kid' as any);
     };
 
     // Track scroll position to update selected index

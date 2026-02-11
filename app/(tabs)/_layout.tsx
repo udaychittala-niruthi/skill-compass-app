@@ -14,10 +14,10 @@ export default function TabLayout() {
         }
     }, [dispatch]);
 
-    // Bottom navigation hidden for now - will be added back later
     return (
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
+            <Stack.Screen name="kid" />
             <Stack.Screen name="explore" />
             <Stack.Screen name="achievements" />
             <Stack.Screen name="settings" />
