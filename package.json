@@ -22,7 +22,6 @@
     "@reduxjs/toolkit": "^2.11.2",
     "@shopify/flash-list": "2.0.2",
     "@tanstack/react-query": "^5.90.20",
-    "@terrylinla/react-native-sketch-canvas": "^0.8.0",
     "@types/jwt-decode": "^2.2.1",
     "axios": "^1.13.4",
     "date-fns": "^4.1.0",
