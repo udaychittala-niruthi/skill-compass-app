@@ -6,10 +6,10 @@ import {
 } from '@apollo/client';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
-import { createClient } from 'graphql-ws';
 import * as SecureStore from 'expo-secure-store';
+import { createClient } from 'graphql-ws';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://13.239.60.116:5003/api';
 const HTTP_GRAPHQL =
     process.env.EXPO_PUBLIC_GRAPHQL_HTTP_URL ||
     API_URL.replace(/\/api$/, '') + '/graphql';

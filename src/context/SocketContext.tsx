@@ -20,7 +20,7 @@ interface SocketProviderProps {
     children: ReactNode;
 }
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:5003';
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'http://13.239.60.116:5003';
 
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     const [socket, setSocket] = useState<Socket | null>(null);
