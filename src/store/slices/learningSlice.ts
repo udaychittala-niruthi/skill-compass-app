@@ -5,6 +5,7 @@ interface LearningState {
     pathStatus: string | null;
     learningPath: any | null; // Detailed path
     currentModules: any[];
+    activeModule: any | null;
     progress: any[];
     schedule: any[];
     loading: boolean;
@@ -15,6 +16,7 @@ const initialState: LearningState = {
     pathStatus: null,
     learningPath: null,
     currentModules: [],
+    activeModule: null,
     progress: [],
     schedule: [],
     loading: false,
@@ -90,6 +92,13 @@ export const fetchModules = createAsyncThunk('learning/fetchModules', async (_, 
     } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
 });
 
+export const fetchModuleById = createAsyncThunk('learning/fetchModuleById', async (moduleId: string, { rejectWithValue }) => {
+    try {
+        const response = await api.get(`/learning-path/modules/${moduleId}`);
+        return response.data.body;
+    } catch (err: any) { return rejectWithValue(extractErrorMessage(err)); }
+});
+
 const learningSlice = createSlice({
     name: 'learning',
     initialState,
@@ -125,6 +134,11 @@ const learningSlice = createSlice({
             state.currentModules = action.payload;
         });
 
+        builder.addCase(fetchModuleById.fulfilled, (state, action) => {
+            state.loading = false;
+            state.activeModule = action.payload;
+        });
+
         builder.addCase(fetchMyProgress.fulfilled, (state, action) => {
             state.loading = false;
             state.progress = action.payload;
@@ -139,6 +153,7 @@ const learningSlice = createSlice({
         builder.addCase(fetchLearningPathStatus.pending, handlePending).addCase(fetchLearningPathStatus.rejected, handleRejected);
         builder.addCase(fetchMyLearningPath.pending, handlePending).addCase(fetchMyLearningPath.rejected, handleRejected);
         builder.addCase(fetchModules.pending, handlePending).addCase(fetchModules.rejected, handleRejected);
+        builder.addCase(fetchModuleById.pending, handlePending).addCase(fetchModuleById.rejected, handleRejected);
         builder.addCase(fetchMyProgress.pending, handlePending).addCase(fetchMyProgress.rejected, handleRejected);
         builder.addCase(fetchMySchedule.pending, handlePending).addCase(fetchMySchedule.rejected, handleRejected);
         builder.addCase(regeneratePath.pending, handlePending).addCase(regeneratePath.rejected, handleRejected);

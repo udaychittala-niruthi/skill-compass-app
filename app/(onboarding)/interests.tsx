@@ -1,5 +1,4 @@
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
-import { SafeIcon } from '../../src/components/SafeIcon';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -9,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { KeyboardAwareScrollView } from '../../src/components/KeyboardAwareScrollView';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { PrimaryInput } from '../../src/components/PrimaryInput';
+import { SafeIcon } from '../../src/components/SafeIcon';
 import { useTheme } from '../../src/context/ThemeContext';
 import { useRedirectToast } from '../../src/hooks/useRedirectToast';
 import { AppDispatch, RootState } from '../../src/store';
@@ -69,8 +69,10 @@ export default function InterestsScreen() {
     };
 
     const handleContinue = async () => {
-        const isTeenOrSenior = user?.group === 'TEENS' || user?.group === 'SENIORS';
-        if (isTeenOrSenior) {
+        // Only Seniors skip skills
+        const shouldSkipSkills = user?.group === 'SENIORS';
+
+        if (shouldSkipSkills) {
             try {
                 await dispatch(updateSkillsAndInterests({
                     skillIds: selectedSkills,
@@ -82,13 +84,15 @@ export default function InterestsScreen() {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             }
         } else {
+            // Everyone else (including TEENS) goes to Skills
             router.push('/(onboarding)/skills' as any);
         }
     };
 
     const handleSkip = async () => {
-        const isTeenOrSenior = user?.group === 'TEENS' || user?.group === 'SENIORS';
-        if (isTeenOrSenior) {
+        const shouldSkipSkills = user?.group === 'SENIORS';
+
+        if (shouldSkipSkills) {
             try {
                 await dispatch(updateSkillsAndInterests({
                     skillIds: [],

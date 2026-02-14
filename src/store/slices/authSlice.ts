@@ -26,6 +26,7 @@ const initialState: AuthState = {
 
 // Helper to extract error message
 const extractErrorMessage = (err: any): string => {
+    console.log('FULL ERROR OBJECT:', err);
     console.log('Server Response:', err.response?.data);
     if (err.response) {
         const data = err.response.data;
@@ -43,6 +44,7 @@ export const loginUser = createAsyncThunk(
     async (credentials: { email: string; password: string }, { rejectWithValue }) => {
         try {
             const response = await api.post<LoginResponse>('/auth/login', credentials);
+            console.log('LOGIN RESPONSE:', JSON.stringify(response.data, null, 2));
             const { token } = response.data.body;
 
             if (token) {
@@ -61,6 +63,7 @@ export const registerUser = createAsyncThunk(
     async (userData: { name: string; email: string; password: string; age?: number }, { rejectWithValue }) => {
         try {
             const response = await api.post<LoginResponse>('/auth/register', userData);
+            console.log('REGISTER RESPONSE:', JSON.stringify(response.data, null, 2));
             const { token } = response.data.body;
 
             if (token) {

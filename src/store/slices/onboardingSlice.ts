@@ -85,7 +85,7 @@ export const getSkillsAndInterests = createAsyncThunk(
 
 export const onboardTeen = createAsyncThunk(
     'onboarding/teen',
-    async (data: { learningStyle: string; weeklyLearningHours: number; courseId: number; branchId: number }, { rejectWithValue }) => {
+    async (data: { learningStyle: string; weeklyLearningHours: number; courseId: number; branchId: number; skillIds: number[]; interestIds: number[] }, { rejectWithValue }) => {
         try {
             const response = await api.post('/onboarding/teens/interests', data);
             return response.data.body;

@@ -186,7 +186,11 @@ export default function ProcessingScreen() {
             };
 
             if (user?.group === 'TEENS') {
-                await dispatch(onboardTeen(baseData)).unwrap();
+                await dispatch(onboardTeen({
+                    ...baseData,
+                    skillIds: selectedSkills,
+                    interestIds: selectedInterests
+                })).unwrap();
             } else if (user?.group === 'COLLEGE_STUDENTS') {
                 await dispatch(onboardStudent(baseData)).unwrap();
             } else if (user?.group === 'PROFESSIONALS') {

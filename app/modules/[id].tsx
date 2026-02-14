@@ -8,10 +8,11 @@ import { MotiView } from 'moti';
 import React, { useRef, useState } from 'react';
 import { Alert, Dimensions, Image, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { useTheme } from '../../src/context/ThemeContext';
-import { RootState } from '../../src/store';
+import { AppDispatch, RootState } from '../../src/store';
+import { fetchModuleById } from '../../src/store/slices/learningSlice';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +26,7 @@ const getYouTubeVideoId = (url: string): string | null => {
 export default function ModuleDetailScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const dispatch = useDispatch<AppDispatch>();
     const insets = useSafeAreaInsets();
     const { colors } = useTheme();
     const [autoplay, setAutoplay] = useState(0);
@@ -32,9 +34,37 @@ export default function ModuleDetailScreen() {
     const videoSectionRef = useRef<View>(null);
 
     // Find module in state
-    const { currentModules, learningPath } = useSelector((state: RootState) => state.learning);
+    const { currentModules, learningPath, activeModule, loading } = useSelector((state: RootState) => state.learning);
+
+    React.useEffect(() => {
+        if (id) {
+            dispatch(fetchModuleById(id as string));
+        }
+    }, [id, dispatch]);
+
     const allModules = [...(currentModules || []), ...(learningPath?.modules || [])];
-    const module = allModules.find(m => m.id === Number(id) || m.id === id);
+    const module = (activeModule && (activeModule.id === Number(id) || activeModule.id === id))
+        ? activeModule
+        : allModules.find(m => m.id === Number(id) || m.id === id);
+
+    if (loading && !module) {
+        return (
+            <View className="flex-1 bg-white items-center justify-center p-6">
+                <MotiView
+                    from={{ opacity: 0.5, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{
+                        type: 'timing',
+                        duration: 1000,
+                        loop: true,
+                    }}
+                >
+                    <MaterialIcons name="auto-stories" size={64} color="#3b82f6" />
+                </MotiView>
+                <Text className="text-lg font-medium mt-4 text-slate-500">Loading module details...</Text>
+            </View>
+        );
+    }
 
     if (!module) {
         return (
